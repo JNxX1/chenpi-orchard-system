@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% from 'macros.html' import badge %}{% block title %}巡检计划{% endblock %}
+{% block content %}
+<div class="page-head"><h1>巡检计划与批次</h1><a class="btn" href="{{ url_for('plans.create') }}">+ 新建计划</a></div>
+<div class="card"><form class="filters" method="get">
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id==oid }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>状态</label><select name="status"><option value="">全部</option>{% for s in statuses %}<option {{ 'selected' if s==status }}>{{ s }}</option>{% endfor %}</select></div>
+<div><button class="btn">查询</button></div></form></div>
+<div class="card">{% if plans %}
+<table><tr><th>计划名称</th><th>果园</th><th>地块</th><th>计划日期</th><th>负责人</th><th>方式</th><th>状态</th><th>识别进度</th></tr>
+{% for p in plans %}{% set pg = p.progress() %}
+<tr><td><a href="{{ url_for('plans.detail', pid=p.id) }}">{{ p.name }}</a>{% if p.is_demo %} <span class="badge b-demo">演示</span>{% endif %}</td><td>{{ p.orchard.name }}</td>
+<td>{{ p.plot.label if p.plot else '全园' }}</td><td>{{ p.planned_date|d }}</td><td>{{ p.owner or '—' }}</td><td>{{ p.method }}</td><td>{{ badge(p.status) }}</td>
+<td><div class="progress-row"><div class="progress"><div style="width:{{ pg.percent }}%"></div></div><span class="muted nowrap">{{ pg.recognized }}/{{ pg.total }} 张</span></div></td></tr>
+{% endfor %}</table>
+{% else %}<div class="empty">暂无巡检计划</div>{% endif %}</div>
+{% endblock %}

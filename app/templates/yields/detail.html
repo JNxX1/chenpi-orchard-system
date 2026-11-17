@@ -1,0 +1,27 @@
+{% extends 'base.html' %}{% block title %}估产详情{% endblock %}
+{% block content %}
+<div class="page-head"><h1>估产记录 #{{ y.id }}（{{ y.level }}）{% if y.is_demo %} <span class="badge b-demo">演示</span>{% endif %}</h1><a class="btn o" href="{{ url_for('yields.index') }}">返回列表</a></div>
+<div class="grid g3">
+<div class="stat"><div class="l">株均可见果数</div><div class="v">{{ y.avg_fruit_per_tree|num }}</div></div>
+<div class="stat"><div class="l">预计总果数</div><div class="v">{{ y.est_fruit_count|round|int|num }}</div></div>
+<div class="stat"><div class="l">预计产量</div><div class="v">{{ y.est_yield_kg|num }} kg</div><div class="s">约 {{ (y.est_yield_kg*2)|num }} 斤</div></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+<div class="card"><h2>数据来源与参数</h2><dl class="kv">
+<dt>果园</dt><dd>{{ y.orchard.name }}</dd><dt>地块</dt><dd>{{ y.plot.label if y.plot else '—' }}</dd>
+<dt>来源批次</dt><dd>{% if y.plan %}<a href="{{ url_for('plans.detail', pid=y.plan_id) }}">{{ y.plan.name }}</a>{% else %}—{% endif %}</dd>
+<dt>计数来源</dt><dd>{{ '优先人工复核数' if y.count_source=='reviewed' else '模型原始数' }}</dd>
+<dt>样本影像数</dt><dd>{{ y.sample_images }}</dd><dt>样本检测果数</dt><dd>{{ y.sample_fruit_count }}</dd>
+<dt>样本树数</dt><dd>{{ y.sample_tree_count }}</dd><dt>目标树数</dt><dd>{{ y.target_tree_count }}</dd>
+<dt>校正系数</dt><dd>{{ y.correction_factor }}</dd><dt>平均单果重</dt><dd>{{ y.avg_fruit_weight_g }} g</dd>
+<dt>备注</dt><dd>{{ y.remark or '—' }}</dd><dt>计算时间</dt><dd>{{ y.created_at|dt }}</dd></dl></div>
+<div class="card"><h2>计算过程</h2>
+<p>样本平均可见果数 = {{ y.sample_fruit_count }} ÷ {{ y.sample_tree_count }} = <b>{{ y.avg_fruit_per_tree|num(4) }}</b></p>
+<p>预计总果数 = {{ y.avg_fruit_per_tree|num(4) }} × {{ y.target_tree_count }} × {{ y.correction_factor }} = <b>{{ y.est_fruit_count|num }}</b></p>
+<p>预计产量 = {{ y.est_fruit_count|num }} × {{ y.avg_fruit_weight_g }} ÷ 1000 = <b>{{ y.est_yield_kg|num(3) }} kg</b></p>
+<div class="hint">{{ y.formula }}</div>
+{% if y.class_breakdown %}<h2 style="margin-top:16px">分级产量拆分（按识别类别比例）</h2><table><tr><th>类别</th><th>预计果数</th><th>预计产量(kg)</th></tr>
+{% for k,v in y.class_breakdown.items() %}<tr><td>{{ k }}</td><td>{{ v|round|int }}</td><td>{{ (v*y.avg_fruit_weight_g/1000)|num }}</td></tr>{% endfor %}</table>
+<div class="hint">按样本中各识别类别的数量比例拆分；类别以模型实际训练类别为准。</div>{% endif %}</div>
+</div>
+{% endblock %}

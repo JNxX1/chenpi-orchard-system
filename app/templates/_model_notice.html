@@ -1,0 +1,5 @@
+{% if status.yolo_ready %}
+<div class="notice">已加载模型 <code>{{ status.model_path }}</code>（置信度 {{ status.conf }}，设备 {{ status.device }}{% if status.class_names %}，类别 {{ status.class_names|join('、') }}{% endif %}）。{% if status.note %}{{ status.note }}{% endif %}</div>
+{% else %}
+<div class="notice red"><b>未配置陈皮柑专用 YOLO 模型</b>{% if not status.ultralytics %}（未安装 ultralytics）{% else %}（未找到 <code>{{ status.model_path }}</code>）{% endif %}{% if status.demo_allowed %}，识别将使用 OpenCV 演示模式，结果标注“演示”。{% else %}，识别功能不可用。{% endif %} 接入方法见 <code>docs/模型接入说明.md</code>。</div>
+{% endif %}

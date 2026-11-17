@@ -1,0 +1,27 @@
+{% extends 'base.html' %}{% from 'macros.html' import confirm_delete %}{% block title %}果园管理{% endblock %}
+{% block content %}
+<div class="page-head"><h1>果园管理</h1><a class="btn" href="{{ url_for('orchards.create') }}">+ 新增果园</a></div>
+<div class="grid g4">
+  <div class="stat"><div class="l">果园</div><div class="v">{{ summary.count }}</div><div class="s">当前筛选结果</div></div>
+  <div class="stat"><div class="l">总面积</div><div class="v">{{ summary.area|num }} 亩</div><div class="s">按果园面积合计</div></div>
+  <div class="stat"><div class="l">预计株数</div><div class="v">{{ summary.trees|num }}</div><div class="s">用于全园估产</div></div>
+  <div class="stat"><div class="l">地块</div><div class="v">{{ summary.plots }}</div><div class="s">已划分地块数</div></div>
+</div>
+<div class="card">
+  <form class="filters" method="get">
+    <div><label>关键字</label><input name="q" value="{{ q }}" placeholder="名称 / 编号 / 区域"></div>
+    <div><button class="btn">查询</button> <a class="btn o" href="{{ url_for('orchards.index') }}">重置</a></div>
+  </form>
+</div>
+<div class="card">
+{% if orchards %}
+<table><tr><th>编号</th><th>名称</th><th>区域</th><th>面积(亩)</th><th>品种</th><th>种植时间</th><th>密度(株/亩)</th><th>预计株数</th><th>地块数</th><th>操作</th></tr>
+{% for o in orchards %}
+<tr><td>{{ o.code }}</td><td><a href="{{ url_for('orchards.detail', oid=o.id) }}">{{ o.name }}</a>{% if o.is_demo %} <span class="badge b-demo">演示</span>{% endif %}</td>
+<td>{{ o.region or '—' }}</td><td>{{ o.area_mu|num }}</td><td>{{ o.variety or '—' }}</td><td>{{ o.planting_date|d }}</td>
+<td>{{ o.density|num }}</td><td>{{ o.expected_trees|num }}</td><td>{{ o.plots.count() }}</td>
+<td class="nowrap"><a class="btn sm o" href="{{ url_for('orchards.edit', oid=o.id) }}">编辑</a> {{ confirm_delete(url_for('orchards.delete', oid=o.id)) }}</td></tr>
+{% endfor %}</table>
+{% else %}<div class="empty">暂无果园数据，请先<a href="{{ url_for('orchards.create') }}">新增果园</a>。</div>{% endif %}
+</div>
+{% endblock %}

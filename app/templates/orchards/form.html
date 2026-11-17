@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% from 'macros.html' import field %}{% block title %}{{ '编辑' if orchard.id else '新增' }}果园{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ '编辑' if orchard.id else '新增' }}果园</h1></div>
+<div class="card"><form method="post">
+<div class="form-grid">
+  {{ field('code','果园编号', form.get('code', orchard.code), required=true, hint='唯一编号，如 XH-001') }}
+  {{ field('name','果园名称', form.get('name', orchard.name), required=true) }}
+  {{ field('region','地址 / 区域', form.get('region', orchard.region), hint='如 江门市新会区双水镇') }}
+  {{ field('variety','品种', form.get('variety', orchard.variety or '茶枝柑')) }}
+  {{ field('area_mu','面积（亩）', form.get('area_mu', orchard.area_mu), type='number', attrs='step="0.01" min="0"') }}
+  {{ field('planting_date','种植时间', form.get('planting_date', orchard.planting_date), type='date') }}
+  {{ field('density','种植密度（株/亩）', form.get('density', orchard.density), type='number', attrs='step="0.1" min="0"') }}
+  {{ field('expected_trees','预计株数', form.get('expected_trees', orchard.expected_trees), type='number', attrs='min="0"', hint='全园估产的目标树数；为空时使用各地块株数之和') }}
+  <div class="full"><label>备注</label><textarea name="remark">{{ form.get('remark', orchard.remark or '') }}</textarea></div>
+</div>
+<p><button class="btn">保存</button> <a class="btn o" href="{{ url_for('orchards.detail', oid=orchard.id) if orchard.id else url_for('orchards.index') }}">取消</a></p>
+</form></div>
+{% endblock %}

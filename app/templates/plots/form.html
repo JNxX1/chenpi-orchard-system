@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% from 'macros.html' import field %}{% block title %}{{ '编辑' if plot.id else '新增' }}地块{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ '编辑' if plot.id else '新增' }}地块</h1></div>
+{% if not orchards %}<div class="notice">请先<a href="{{ url_for('orchards.create') }}">新增果园</a>，再添加地块。</div>{% endif %}
+<div class="card"><form method="post"><div class="form-grid">
+{% set cur = (form.get('orchard_id') or plot.orchard_id)|string %}
+<div><label>所属果园 <span class="req">*</span></label><select name="orchard_id" required>
+<option value="">请选择</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id|string == cur }}>{{ o.code }} {{ o.name }}</option>{% endfor %}</select></div>
+{{ field('code','地块编号', form.get('code', plot.code), required=true, hint='同一果园内唯一，如 A01') }}
+{{ field('name','地块名称', form.get('name', plot.name)) }}
+{{ field('variety','品种', form.get('variety', plot.variety), hint='为空则沿用果园品种') }}
+{{ field('area_mu','面积（亩）', form.get('area_mu', plot.area_mu), type='number', attrs='step="0.01" min="0"') }}
+{{ field('tree_count','株数', form.get('tree_count', plot.tree_count), type='number', attrs='min="0"', hint='地块级估产的目标树数') }}
+{{ field('latitude','纬度（可选）', form.get('latitude', plot.latitude), type='number', attrs='step="any"', hint='预留地理坐标字段，无真实定位数据可留空') }}
+{{ field('longitude','经度（可选）', form.get('longitude', plot.longitude), type='number', attrs='step="any"') }}
+<div class="full"><label>备注</label><textarea name="remark">{{ form.get('remark', plot.remark or '') }}</textarea></div>
+</div><p><button class="btn">保存</button> <a class="btn o" href="{{ url_for('plots.index') }}">取消</a></p></form></div>
+{% endblock %}

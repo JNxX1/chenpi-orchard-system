@@ -1,0 +1,250 @@
+{% extends 'base.html' %}{% block title %}实时识别{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>实时识别</h1>
+  <span class="badge b-demo">演示 · 不写入数据库</span>
+</div>
+
+<div class="grid live-grid">
+  <div class="card live-card">
+    <div class="live-stage" id="stage">
+      <video id="video" playsinline muted hidden></video>
+      <img id="still" alt="待识别图片" hidden>
+      <div class="live-empty" id="empty">
+        <div class="live-empty-icon">📷</div>
+        <p>点击「开启摄像头」实时框选果实，<br>或选择一张果园照片试识别。</p>
+      </div>
+      <canvas id="overlay"></canvas>
+      <div class="live-flash" id="flash"></div>
+    </div>
+    <div class="live-controls">
+      <button class="btn" id="startBtn">开启摄像头</button>
+      <button class="btn o" id="stopBtn" disabled>停止</button>
+      <label class="btn o file-btn">选择图片<input type="file" id="fileInput" accept="image/*" hidden></label>
+      <span class="hint" id="msg">首次使用需允许浏览器访问摄像头；笔记本没有摄像头时可用图片测试。</span>
+    </div>
+  </div>
+
+  <aside class="card live-side">
+    <h2>识别状态</h2>
+    <div class="live-stat"><span>目标数</span><b id="count">—</b></div>
+    <div class="live-stat"><span>单帧耗时</span><b id="ms">—</b></div>
+    <div class="live-stat"><span>识别方式</span><b id="mode" style="font-size:14px">—</b></div>
+    <div class="live-stat"><span>帧率</span><b id="fps">—</b></div>
+    <div class="divider"></div>
+    <h2 style="font-size:15px;margin:4px 0 10px">产值测算</h2>
+    <div class="est-form">
+      <label>选择果园</label>
+      <select id="orchard">
+        <option value="">— 选择果园 —</option>
+        {% for o in orchards %}
+        <option value="{{ o.trees }}">{{ o.name }}{% if not o.trees %}（缺株数）{% endif %}</option>
+        {% endfor %}
+      </select>
+      <div class="est-grid">
+        <div><label>本帧样本树数</label><input id="sampleTrees" type="number" min="0.5" step="0.5" value="1"></div>
+        <div><label>校正系数</label><input id="factor" type="number" min="0.1" step="0.05" value="0.85"></div>
+        <div><label>单果重(g)</label><input id="weight" type="number" min="1" step="0.5" value="12.5"></div>
+        <div><label>单价(元/kg)</label><input id="price" type="number" min="0" step="1" value="20"></div>
+      </div>
+    </div>
+    <div class="est-result">
+      <div><span>全园估算果数</span><b id="estFruit">—</b></div>
+      <div><span>估算产量</span><b id="estYield">—</b></div>
+      <div class="big"><span>估算产值</span><b id="estValue">—</b></div>
+    </div>
+    <p class="hint">按“当前帧检出数 ÷ 样本树数 × 全园株数 × 校正系数”估算；结果仅作现场参考，正式估产请到「产量估算」。</p>
+    <div class="divider"></div>    <p class="hint">画面只在内存中处理，不做存储；要归档请到「影像管理 → 上传影像」。</p>
+    <p class="hint">当前模型：<code>{{ status.model_path.split('\\')[-1] if status.model_path else '—' }}</code>{% if status.yolo_ready %}（YOLO）{% else %}（演示模式）{% endif %}</p>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+(function () {
+  const video = document.getElementById('video');
+  const still = document.getElementById('still');
+  const canvas = document.getElementById('overlay');
+  const ctx = canvas.getContext('2d');
+  const empty = document.getElementById('empty');
+  const flash = document.getElementById('flash');
+  const msg = document.getElementById('msg');
+  const elCount = document.getElementById('count');
+  const elMs = document.getElementById('ms');
+  const elMode = document.getElementById('mode');
+  const elFps = document.getElementById('fps');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const fileInput = document.getElementById('fileInput');
+
+  let stream = null, timer = null, busy = false, boxes = [], last = 0, active = false;
+  let srcW = 1, srcH = 1, lastCount = 0;
+
+  const orchard = document.getElementById('orchard');
+  const estFruit = document.getElementById('estFruit');
+  const estYield = document.getElementById('estYield');
+  const estValue = document.getElementById('estValue');
+
+  function estNum(id, fallback) {
+    const v = parseFloat(document.getElementById(id).value);
+    return isFinite(v) ? v : fallback;
+  }
+
+  function updateEstimate() {
+    const trees = parseFloat(orchard.value) || 0;
+    const sampleTrees = estNum('sampleTrees', 1);
+    const factor = estNum('factor', 0.85);
+    const weight = estNum('weight', 12.5);
+    const price = estNum('price', 20);
+    if (!lastCount || !trees || sampleTrees <= 0) {
+      estFruit.textContent = estYield.textContent = estValue.textContent = '—';
+      return;
+    }
+    const perTree = lastCount / sampleTrees;
+    const totalFruit = perTree * trees * factor;
+    const yieldKg = totalFruit * weight / 1000;
+    const value = yieldKg * price;
+    estFruit.textContent = Math.round(totalFruit).toLocaleString();
+    estYield.textContent = yieldKg.toFixed(1) + ' kg';
+    estValue.textContent = '¥ ' + Math.round(value).toLocaleString();
+  }
+
+  ['orchard', 'sampleTrees', 'factor', 'weight', 'price'].forEach(function (id) {
+    const el = document.getElementById(id);
+    el.addEventListener('input', updateEstimate);
+    el.addEventListener('change', updateEstimate);
+  });
+
+  function fit() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr);
+    canvas.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  window.addEventListener('resize', fit);
+
+  function draw() {
+    const cw = canvas.clientWidth, ch = canvas.clientHeight;
+    ctx.clearRect(0, 0, cw, ch);
+    if (!boxes.length || !srcW || !srcH) return;
+    // 与 object-fit: contain 对齐：先算出画面在舞台中的实际显示区域
+    const ar = srcW / srcH, car = cw / ch;
+    let w = cw, h = ch, ox = 0, oy = 0;
+    if (ar > car) { h = cw / ar; oy = (ch - h) / 2; } else { w = ch * ar; ox = (cw - w) / 2; }
+    const sx = w / srcW, sy = h / srcH;
+    ctx.lineWidth = 2;
+    ctx.font = '600 12px -apple-system, "Microsoft YaHei", sans-serif';
+    boxes.forEach(function (b) {
+      const x = ox + b.x1 * sx, y = oy + b.y1 * sy, bw = (b.x2 - b.x1) * sx, bh = (b.y2 - b.y1) * sy;
+      ctx.strokeStyle = 'rgba(255,149,0,.95)';
+      ctx.fillStyle = 'rgba(255,149,0,.10)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, bw, bh, 6); else ctx.rect(x, y, bw, bh);
+      ctx.fill(); ctx.stroke();
+      if (b.conf != null) {
+        const label = b.conf.toFixed(2);
+        const tw = ctx.measureText(label).width + 10;
+        ctx.fillStyle = 'rgba(255,149,0,.95)';
+        ctx.fillRect(x, Math.max(0, y - 16), tw, 16);
+        ctx.fillStyle = '#1d1d1f';
+        ctx.fillText(label, x + 5, Math.max(12, y - 4));
+      }
+    });
+  }
+
+  function sendFrame() {
+    if (busy || !active) return;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw) return;
+    const scale = Math.min(1, 960 / vw);
+    const off = document.createElement('canvas');
+    off.width = Math.round(vw * scale);
+    off.height = Math.round(vh * scale);
+    off.getContext('2d').drawImage(video, 0, 0, off.width, off.height);
+    return post(off.toDataURL('image/jpeg', 0.7), vw, vh);
+  }
+
+  function post(dataUrl, w, h) {
+    busy = true;
+    const t0 = performance.now();
+    fetch('{{ url_for("live.detect") }}', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataUrl })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) throw new Error(d.error || '识别失败');
+      boxes = d.boxes || [];
+      srcW = d.width; srcH = d.height;
+      elCount.textContent = d.count;
+      lastCount = d.count;
+      updateEstimate();
+      elMs.textContent = d.ms + ' ms';
+      elMode.textContent = d.mode + (d.demo ? '（演示）' : '');
+      const now = performance.now();
+      if (last) elFps.textContent = (1000 / (now - last)).toFixed(1) + ' fps';
+      last = now;
+      draw();
+    }).catch(function (e) {
+      msg.textContent = '识别失败：' + e.message;
+    }).finally(function () {
+      setTimeout(function () { busy = false; }, 40);
+    });
+  }
+
+  function loop() {
+    if (!active) return;
+    sendFrame();
+    timer = setTimeout(loop, 320);
+  }
+
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, facingMode: 'environment' }, audio: false });
+      video.srcObject = stream;
+      await video.play();
+      video.hidden = false; still.hidden = true; empty.hidden = true;
+      active = true; startBtn.disabled = true; stopBtn.disabled = false;
+      msg.textContent = '摄像头已开启，移动镜头即可实时框选。';
+      fit(); loop();
+    } catch (e) {
+      msg.textContent = '无法打开摄像头（' + e.name + '），可改用「选择图片」测试。';
+    }
+  }
+
+  function stopAll() {
+    active = false; clearTimeout(timer); busy = false;
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    video.hidden = true; video.srcObject = null;
+    boxes = []; lastCount = 0; updateEstimate(); draw();
+    startBtn.disabled = false; stopBtn.disabled = true;
+    elCount.textContent = elMs.textContent = elFps.textContent = '—';
+    msg.textContent = '已停止。';
+  }
+
+  fileInput.addEventListener('change', function (e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    stopAll();
+    const url = URL.createObjectURL(f);
+    still.onload = function () {
+      still.hidden = false; empty.hidden = true; video.hidden = true;
+      srcW = still.naturalWidth; srcH = still.naturalHeight;
+      fit();
+      const off = document.createElement('canvas');
+      const scale = Math.min(1, 1280 / still.naturalWidth);
+      off.width = Math.round(still.naturalWidth * scale);
+      off.height = Math.round(still.naturalHeight * scale);
+      off.getContext('2d').drawImage(still, 0, 0, off.width, off.height);
+      flash.classList.add('on');
+      setTimeout(function () { flash.classList.remove('on'); }, 900);
+      post(off.toDataURL('image/jpeg', 0.85));
+      msg.textContent = '图片识别完成，可再选一张对比。';
+    };
+    still.src = url;
+  });
+
+  startBtn.addEventListener('click', startCamera);
+  stopBtn.addEventListener('click', stopAll);
+  window.addEventListener('beforeunload', stopAll);
+})();
+</script>{% endblock %}

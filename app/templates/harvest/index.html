@@ -1,0 +1,48 @@
+{% extends 'base.html' %}{% from 'macros.html' import confirm_delete %}{% block title %}采收记录{% endblock %}
+{% block content %}
+<div class="page-head"><h1>采收记录</h1><a class="btn" href="{{ url_for('harvest.create') }}">+ 新增记录</a></div>
+
+<div class="card"><form class="filters" method="get">
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id==oid }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>年份</label><select name="year"><option value="">全部</option>{% for y in years %}<option value="{{ y }}" {{ 'selected' if y==year }}>{{ y }}</option>{% endfor %}</select></div>
+<div><button class="btn">查询</button></div></form></div>
+
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="stat"><div class="l">实际采收合计（当前筛选）</div><div class="v">{{ total|num }} kg</div><div class="s">用于和估产对比</div></div>
+  <div class="stat"><div class="l">记录数</div><div class="v">{{ items|length }}</div><div class="s">按果园/地块/年份登记</div></div>
+</div>
+
+<div class="card">{% if items %}
+<table><tr><th>#</th><th>年份</th><th>果园</th><th>地块</th><th>实际产量(kg)</th><th>均价(元/kg)</th><th>备注</th><th>登记时间</th><th></th></tr>
+{% for h in items %}<tr>
+<td>{{ h.id }}</td><td>{{ h.year }}</td><td>{{ h.orchard.name }}</td><td>{{ h.plot.label if h.plot else '全园' }}</td>
+<td><b>{{ h.actual_yield_kg|num }}</b>{% if h.is_demo %} <span class="badge b-demo">演示</span>{% endif %}</td>
+<td>{{ h.avg_price|num if h.avg_price is not none else '—' }}</td><td>{{ h.note or '—' }}</td><td>{{ h.created_at|dt }}</td>
+<td>{{ confirm_delete(url_for('harvest.delete', hid=h.id), '删除') }}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">还没有采收记录。采收季结束后把实际产量登记进来，就能在「产量估算」页看到估产偏差。</div>{% endif %}</div>
+
+<div class="card"><h2>估产 vs 实际采收（全部果园）</h2>
+{% if compare %}<table><tr><th>年份</th><th>全园估产合计(kg)</th><th>实际采收合计(kg)</th><th>估产偏差</th></tr>
+{% for r in compare %}<tr><td>{{ r.year }}</td><td>{{ r.estimate|num }}</td><td>{{ r.actual|num }}</td>
+<td>{% if r.diff is none %}—{% else %}<span class="{{ 'up' if r.diff>0 else ('down' if r.diff<0 else 'flat') }}">{{ '%+.1f'|format(r.diff) }}%</span>{% endif %}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">还没有可对比的数据</div>{% endif %}
+<div class="hint">估产偏差 =（估产合计 − 实际采收）÷ 实际采收；正数表示估高，负数表示估低。</div></div>
+
+<div class="card"><h2>年度产量对比</h2>
+{% if compare %}<div class="chart-box"><canvas id="hChart"></canvas></div>
+{% else %}<div class="empty">登记采收记录后显示</div>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}{% if compare %}<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script><script>
+const rows = {{ compare|tojson }};
+const labels = rows.map(function (r) { return r.year; }).reverse();
+const est = rows.map(function (r) { return r.estimate; }).reverse();
+const act = rows.map(function (r) { return r.actual; }).reverse();
+new Chart(document.getElementById('hChart'), {
+  type: 'bar',
+  data: { labels: labels, datasets: [
+    { label: '全园估产(kg)', data: est, backgroundColor: '#ff9500', borderRadius: 6, maxBarThickness: 44 },
+    { label: '实际采收(kg)', data: act, backgroundColor: '#34c759', borderRadius: 6, maxBarThickness: 44 }] },
+  options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+</script>{% endif %}{% endblock %}

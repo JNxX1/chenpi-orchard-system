@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% from 'macros.html' import field %}{% block title %}{{ '编辑' if plan.id else '新建' }}巡检计划{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ '编辑' if plan.id else '新建' }}巡检计划</h1></div>
+{% if not orchards %}<div class="notice">请先<a href="{{ url_for('orchards.create') }}">新增果园</a>。</div>{% endif %}
+<div class="card"><form method="post"><div class="form-grid">
+{{ field('name','计划名称', form.get('name', plan.name), required=true, hint='如 2026年10月A区成熟期巡检') }}
+{% set co = (form.get('orchard_id') or plan.orchard_id)|string %}
+{% set cp = (form.get('plot_id') or plan.plot_id)|string %}
+<div><label>果园 <span class="req">*</span></label><select name="orchard_id" id="orchard_id" required>
+<option value="">请选择</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id|string==co }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>地块</label><select name="plot_id" id="plot_id"><option value="">全园（不限地块）</option>
+{% for p in plots %}<option value="{{ p.id }}" data-orchard="{{ p.orchard_id }}" {{ 'selected' if p.id|string==cp }}>{{ p.label }}</option>{% endfor %}</select></div>
+{{ field('planned_date','计划日期', form.get('planned_date', plan.planned_date or today()), type='date', required=true) }}
+{{ field('executed_date','实际执行日期', form.get('executed_date', plan.executed_date), type='date') }}
+{{ field('owner','负责人', form.get('owner', plan.owner)) }}
+{% set cm = form.get('method', plan.method or '手持拍摄') %}
+<div><label>巡检方式</label><select name="method">{% for m in methods %}<option {{ 'selected' if m==cm }}>{{ m }}</option>{% endfor %}</select>
+<div class="hint">首期以网页上传图片为数据入口；无人机仅作为采集方式记录，不含飞控</div></div>
+{% set cs = form.get('status', plan.status or '待执行') %}
+<div><label>状态</label><select name="status">{% for s in statuses %}<option {{ 'selected' if s==cs }}>{{ s }}</option>{% endfor %}</select></div>
+<div class="full"><label>备注</label><textarea name="remark">{{ form.get('remark', plan.remark or '') }}</textarea></div>
+</div><p><button class="btn">保存</button> <a class="btn o" href="{{ url_for('plans.index') }}">取消</a></p></form></div>
+{% endblock %}
+{% block scripts %}<script>
+(function(){const o=document.getElementById('orchard_id'),p=document.getElementById('plot_id');
+function f(){[...p.options].forEach(op=>{if(!op.dataset.orchard)return;const show=op.dataset.orchard===o.value;op.hidden=!show;if(!show&&op.selected)p.value='';});}
+o.addEventListener('change',f);f();})();
+</script>{% endblock %}

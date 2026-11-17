@@ -1,0 +1,133 @@
+{% extends 'base.html' %}{% block title %}业务助手{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>果园业务助手</h1>
+  {% if llm_status.ready %}
+  <span class="badge b-成功">本地 AI · {{ llm_status.model }}</span>
+  {% else %}
+  <span class="badge">规则问答{{ '（模型未就绪）' if llm_status.enabled }}</span>
+  {% endif %}
+</div>
+
+<div class="notice">
+  {% if llm_status.ready %}
+  已接入本地大模型 <code>{{ llm_status.model }}</code>（{{ llm_status.provider }}）：<b>数量、名称、日期全部由数据库查询</b>后交给模型组织语言，模型只负责表达，不编造数据。第一次提问可能需要几十秒加载模型。
+  {% elif llm_status.enabled %}
+  当前未连接到大模型（{{ llm_status.detail }}），助手使用规则问答；不影响巡检、识别、估产等核心功能。
+  {% else %}
+  已在配置中关闭大模型，助手使用规则问答。
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="chat" id="chat">
+    <div class="msg a"><span>你好，我是果园业务助手。可以问我：未完成的巡检任务、识别统计、最近的估产、异常点位，或者系统整体情况。{% if llm_status.ready %}我会先查数据库，再用自然语言回答你。{% endif %}</span></div>
+  </div>
+  <div class="ask-row">
+    <input id="q" placeholder="例如：还有哪些巡检任务没完成？" maxlength="500" autocomplete="off">
+    <button class="btn" id="send">发送</button>
+  </div>
+  <div class="quick-row">
+    {% for s in ['有哪些未完成的巡检任务','识别统计','最近的估产结果','有没有异常点位','系统概况'] %}
+    <button class="btn sm o quick">{{ s }}</button>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+(function () {
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('q');
+  const sendBtn = document.getElementById('send');
+  const AI = {{ 'true' if llm_status.ready else 'false' }};
+
+  function bubble(cls, text, prefix) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + cls;
+    const span = document.createElement('span');
+    if (prefix) {
+      const b = document.createElement('b');
+      b.textContent = prefix;
+      span.appendChild(b);
+      span.appendChild(document.createElement('br'));
+    }
+    span.appendChild(document.createTextNode(text));
+    wrap.appendChild(span);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function addFacts(container, facts, error) {
+    if (error) {
+      const warn = document.createElement('div');
+      warn.className = 'msg a small-note';
+      const s = document.createElement('span');
+      s.textContent = '（AI 暂不可用：' + error + '，下面是数据库查询结果）';
+      warn.appendChild(s);
+      container.appendChild(warn);
+    }
+    if (!facts) return;
+    const details = document.createElement('details');
+    details.className = 'facts';
+    const summary = document.createElement('summary');
+    summary.textContent = '查看数据库依据';
+    const pre = document.createElement('pre');
+    pre.textContent = facts;
+    details.appendChild(summary);
+    details.appendChild(pre);
+    container.appendChild(details);
+  }
+
+  function setBusy(busy) {
+    sendBtn.disabled = busy;
+    sendBtn.textContent = busy ? '思考中…' : '发送';
+  }
+
+  async function send(text) {
+    text = (text || input.value).trim();
+    if (!text) return;
+    input.value = '';
+    bubble('u', text);
+    const holder = bubble('a', '');
+    const span = holder.querySelector('span');
+    const dots = document.createElement('span');
+    dots.className = 'typing';
+    dots.innerHTML = '<i></i><i></i><i></i>';
+    span.appendChild(dots);
+    chat.scrollTop = chat.scrollHeight;
+    setBusy(true);
+
+    try {
+      const r = await fetch('{{ url_for("assistant.ask") }}', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text })
+      });
+      const d = await r.json();
+      span.textContent = '';
+      if (d.answer) {
+        span.appendChild(document.createTextNode(d.answer));
+      } else {
+        span.appendChild(document.createTextNode(d.facts || '暂时没有查到相关数据。'));
+      }
+      addFacts(holder, d.answer ? d.facts : null, d.answer ? null : (d.error || '模型未就绪'));
+      if (d.answer && d.error) addFacts(holder, null, d.error);
+    } catch (e) {
+      span.textContent = '请求失败：' + e.message;
+    } finally {
+      setBusy(false);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  }
+
+  sendBtn.addEventListener('click', function () { send(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+  document.querySelectorAll('.quick').forEach(function (b) {
+    b.addEventListener('click', function () { send(b.textContent); });
+  });
+
+  if (AI) {
+    fetch('{{ url_for("assistant.warm") }}', { method: 'POST' }).catch(function () {});
+  }
+})();
+</script>{% endblock %}

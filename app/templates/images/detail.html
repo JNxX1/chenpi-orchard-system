@@ -1,0 +1,136 @@
+{% extends 'base.html' %}{% from 'macros.html' import badge, mode_badge, confirm_delete %}{% block title %}影像详情{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ image.original_name }} {{ badge(image.status) }}{% if image.archived %} <span class="badge">已归档</span>{% endif %}{% if image.is_abnormal %} <span class="badge b-异常">异常点位</span>{% endif %}</h1>
+<div><a class="btn o" href="{{ url_for('plans.detail', pid=image.plan_id) }}">返回批次</a>
+<form class="inline" method="post" action="{{ url_for('images.toggle', iid=image.id, field='archived') }}"><button class="btn o">{{ '取消归档' if image.archived else '归档' }}</button></form>
+<form class="inline" method="post" action="{{ url_for('images.toggle', iid=image.id, field='is_abnormal') }}"><button class="btn o">{{ '取消异常' if image.is_abnormal else '标记异常' }}</button></form>
+{% if not image.archived %}{{ confirm_delete(url_for('images.delete', iid=image.id), '删除影像') }}{% endif %}</div></div>
+{% include '_model_notice.html' %}
+{% if run and run.status=='成功' %}
+<div class="card" id="replayCard">
+  <h2>识别回放 <span class="badge b-demo">逐框绘制</span></h2>
+  <div class="detect-stage" id="stage" data-url="{{ url_for('images.detections_json', iid=image.id, run_id=run.id) }}">
+    <img src="{{ url_for('images.file', iid=image.id, kind='original') }}" alt="识别回放">
+    <svg id="overlay" preserveAspectRatio="none"></svg>
+    <div class="scan"></div>
+  </div>
+  <div class="detect-toolbar">
+    <span class="count">检测到 <b id="cnum">0</b> 个目标</span>
+    <button class="btn sm o" id="replayBtn" type="button">重播动画</button>
+    <a class="btn sm o" target="_blank" href="{{ url_for('images.file', iid=image.id, kind='result', run_id=run.id) }}">查看结果图</a>
+    <span class="hint">动画只用于展示，检测框坐标与“检测框明细”表一致。</span>
+  </div>
+</div>
+{% endif %}
+<div class="card"><div class="img-pair">
+<div><h2>原图</h2><a href="{{ url_for('images.file', iid=image.id, kind='original') }}" target="_blank"><img class="zoomable" src="{{ url_for('images.file', iid=image.id, kind='original') }}" alt="原图"></a></div>
+<div><h2>识别结果图</h2>{% if run and run.status=='成功' %}<a href="{{ url_for('images.file', iid=image.id, kind='result', run_id=run.id) }}" target="_blank"><img class="zoomable" src="{{ url_for('images.file', iid=image.id, kind='result', run_id=run.id) }}" alt="结果图"></a>
+{% elif run %}<div class="empty">识别失败：{{ run.error_message }}</div>{% else %}<div class="empty">尚未识别</div>{% endif %}</div>
+</div>
+<form method="post" action="{{ url_for('images.recognize', iid=image.id) }}" class="filters" style="margin-top:12px" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').innerText='识别中…'">
+<div><label>识别方式</label><select name="mode"><option value="auto">自动（有模型用 YOLO）</option><option value="yolo">仅 YOLO 模型</option><option value="opencv_demo">OpenCV 演示模式</option></select></div>
+<div><button class="btn g">{{ '重新识别' if image.runs.count() else '开始识别' }}</button></div></form></div>
+
+<div class="grid g2">
+{% if run and run.status=='成功' %}
+<div class="card"><h2>识别结果（记录 #{{ run.id }}）</h2><dl class="kv">
+<dt>识别方式</dt><dd>{{ mode_badge(run) }}</dd><dt>模型</dt><dd>{{ run.model_name }}</dd>
+<dt>置信度阈值</dt><dd>{{ run.conf_threshold if run.conf_threshold is not none else '—' }}</dd><dt>设备 / 耗时</dt><dd>{{ run.device }} / {{ run.duration_ms }} ms</dd>
+<dt>模型检测数</dt><dd><b>{{ run.total_count }}</b></dd>
+<dt>人工复核数</dt><dd>{% if run.reviewed_count is not none %}<b>{{ run.reviewed_count }}</b>（{{ run.reviewed_at|dt }}）{{ run.review_note or '' }}{% else %}未复核{% endif %}</dd>
+<dt>类别统计</dt><dd>{% for k,v in run.class_counts.items() %}<span class="badge">{{ k }}：{{ v }}</span> {% else %}无{% endfor %}</dd>
+<dt>相对大小</dt><dd>{% for k,v in run.size_counts.items() %}<span class="badge">{{ k }}：{{ v }}</span> {% else %}无{% endfor %}
+<div class="hint">按检测框面积占整图比例划分（&lt;{{ config.SIZE_GRADE_THRESHOLDS[0]*100 }}% 小，&gt;{{ config.SIZE_GRADE_THRESHOLDS[1]*100 }}% 大），是相对图像大小，不代表真实果径</div></dd>
+<dt>成熟度</dt><dd>{% for k,v in (run.maturity_counts or {}).items() %}<span class="badge">{{ k }}：{{ v }}</span> {% else %}无{% endfor %}
+<div class="hint">按检测框内橙黄色/绿色像素比例做颜色估算，不是模型分类，仅供现场参考</div></dd>
+<dt>识别时间</dt><dd>{{ run.created_at|dt }}</dd></dl>
+<form method="post" action="{{ url_for('results.review', rid=run.id) }}" class="filters" style="margin-top:12px">
+<div><label>人工复核果数</label><input type="number" min="0" name="reviewed_count" value="{{ run.reviewed_count if run.reviewed_count is not none else '' }}" required></div>
+<div style="flex:1"><label>复核说明</label><input name="review_note" value="{{ run.review_note or '' }}"></div>
+<div><button class="btn sm">保存复核</button></div></form>
+{% if run.reviewed_count is not none %}<form method="post" action="{{ url_for('results.review', rid=run.id) }}"><input type="hidden" name="clear" value="1"><button class="btn sm o" style="margin-top:6px">清除复核</button></form>{% endif %}
+<div class="hint">人工复核不会修改模型原始结果，统计和估产可选择使用哪一种。</div></div>
+{% endif %}
+<div class="card"><h2>影像信息</h2><dl class="kv">
+<dt>所属批次</dt><dd><a href="{{ url_for('plans.detail', pid=image.plan_id) }}">{{ image.plan.name }}</a></dd>
+<dt>果园 / 地块</dt><dd>{{ image.plan.orchard.name }} / {{ image.plan.plot.label if image.plan.plot else '全园' }}</dd>
+<dt>尺寸 / 大小</dt><dd>{{ image.width }}×{{ image.height }} / {{ (image.file_size/1024)|round(1) }} KB</dd>
+<dt>采集方式</dt><dd>{{ image.source or (image.plan.method ~ '（跟随计划）') }}</dd>
+<dt>坐标</dt><dd>{% if image.latitude is not none and image.longitude is not none %}{{ '%.6f'|format(image.latitude) }}, {{ '%.6f'|format(image.longitude) }}
+<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat={{ image.latitude }}&mlon={{ image.longitude }}#map=17/{{ image.latitude }}/{{ image.longitude }}">地图</a>{% else %}未记录{% endif %}</dd>
+<dt>拍摄时间</dt><dd>{{ image.captured_at|dt }}</dd><dt>上传时间</dt><dd>{{ image.created_at|dt }}</dd></dl>
+<form method="post" action="{{ url_for('images.update', iid=image.id) }}" style="margin-top:12px"><div class="form-grid">
+<div><label>样本树数</label><input type="number" min="1" name="sample_trees" value="{{ image.sample_trees or '' }}"></div>
+<div><label>纬度 / 经度</label><div style="display:flex;gap:6px"><input type="number" step="any" name="latitude" value="{{ image.latitude if image.latitude is not none else '' }}"><input type="number" step="any" name="longitude" value="{{ image.longitude if image.longitude is not none else '' }}"></div></div>
+<div class="full"><label>备注</label><textarea name="remark">{{ image.remark or '' }}</textarea></div></div>
+<p><button class="btn sm">保存</button></p></form></div>
+</div>
+
+{% if runs %}<div class="card"><h2>识别历史</h2><table><tr><th>#</th><th>时间</th><th>方式</th><th>状态</th><th>模型数</th><th>复核数</th><th></th></tr>
+{% for r in runs %}<tr><td>{{ r.id }}</td><td>{{ r.created_at|dt }}</td><td>{{ mode_badge(r) }}</td><td>{{ badge(r.status) }}</td><td>{{ r.total_count }}</td><td>{{ r.reviewed_count if r.reviewed_count is not none else '—' }}</td>
+<td><a href="{{ url_for('images.detail', iid=image.id, run_id=r.id) }}">查看</a></td></tr>{% endfor %}</table></div>{% endif %}
+
+{% if run and run.status=='成功' and run.total_count %}<div class="card"><h2>检测框明细</h2><table><tr><th>#</th><th>类别</th><th>置信度</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th>面积占比</th><th>相对大小</th><th>成熟度（颜色）</th></tr>
+{% for d in run.detections %}<tr><td>{{ loop.index }}</td><td>{{ d.class_name }}</td><td>{{ '%.3f'|format(d.confidence) if d.confidence is not none else '—' }}</td>
+<td>{{ d.x1|round|int }}</td><td>{{ d.y1|round|int }}</td><td>{{ d.x2|round|int }}</td><td>{{ d.y2|round|int }}</td><td>{{ '%.3f'|format(d.area_ratio*100) }}%</td><td>{{ d.size_grade }}</td><td>{{ d.maturity or '—' }}</td></tr>{% endfor %}</table></div>{% endif %}
+{% endblock %}
+{% block scripts %}{% if run and run.status=='成功' %}<script>
+(function () {
+  var stage = document.getElementById('stage');
+  if (!stage) return;
+  var img = stage.querySelector('img');
+  var svg = document.getElementById('overlay');
+  var num = document.getElementById('cnum');
+  var btn = document.getElementById('replayBtn');
+  var NS = 'http://www.w3.org/2000/svg';
+  var data = null;
+
+  function countUp(n) {
+    var start = performance.now(), dur = 600;
+    function step(t) {
+      var p = Math.min(1, (t - start) / dur);
+      num.textContent = Math.round(n * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function draw() {
+    if (!data) return;
+    var W = data.width || img.naturalWidth, H = data.height || img.naturalHeight;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = '';
+    var lw = Math.max(2, W / 420);
+    data.boxes.forEach(function (b, i) {
+      var r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', b.x1); r.setAttribute('y', b.y1);
+      r.setAttribute('width', Math.max(1, b.x2 - b.x1));
+      r.setAttribute('height', Math.max(1, b.y2 - b.y1));
+      r.setAttribute('rx', 6);
+      r.setAttribute('fill', 'rgba(10,132,255,.10)');
+      r.setAttribute('stroke', 'rgba(10,132,255,.95)');
+      r.setAttribute('stroke-width', lw);
+      r.style.animationDelay = (i * 45) + 'ms';
+      svg.appendChild(r);
+      requestAnimationFrame(function () { r.classList.add('in'); });
+    });
+    stage.classList.remove('scanning');
+    void stage.offsetWidth;
+    stage.classList.add('scanning');
+    setTimeout(function () { stage.classList.remove('scanning'); }, 1400);
+    countUp(data.count);
+  }
+
+  fetch(stage.dataset.url).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.ok) throw new Error(d.error || 'no data');
+    data = d;
+    draw();
+  }).catch(function () {
+    var card = document.getElementById('replayCard');
+    if (card) card.hidden = true;
+  });
+
+  btn.addEventListener('click', draw);
+  if (img.complete) draw(); else img.addEventListener('load', draw);
+})();
+</script>{% endif %}{% endblock %}

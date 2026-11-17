@@ -1,0 +1,138 @@
+{% extends 'base.html' %}{% block title %}数据浏览{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>数据浏览</h1>
+  <span class="badge">只读</span>
+</div>
+
+<div class="grid g4">
+  <div class="stat"><div class="l">数据表</div><div class="v">{{ info.tables|length }}</div><div class="s">业务 / 识别 / 分析 / 系统</div></div>
+  <div class="stat"><div class="l">总记录数</div><div class="v">{{ info.total_rows|num }}</div><div class="s">所有表合计</div></div>
+  <div class="stat"><div class="l">数据库大小</div><div class="v">{{ info.size_kb|num }} KB</div><div class="s">SQLite 单文件</div></div>
+  <div class="stat"><div class="l">访问方式</div><div class="v" style="font-size:24px">只读</div><div class="s">修改请回功能页</div></div>
+</div>
+
+<div class="card db-overview">
+  <div class="db-overview-head">
+    <h2>各表记录数</h2>
+    <div class="db-legend">
+      <span><i style="background:#34c759"></i>业务档案</span>
+      <span><i style="background:#007aff"></i>影像识别</span>
+      <span><i style="background:#ff9500"></i>分析与报表</span>
+      <span><i style="background:#8e8e93"></i>系统</span>
+    </div>
+  </div>
+  <div class="db-chart"><canvas id="dbChart"></canvas></div>
+</div>
+
+<div class="db-layout">
+  <div class="card db-side">
+    <h2>数据表</h2>
+    <div class="db-tables">
+      {% for t in info.tables %}
+      <a href="{{ url_for('database.index', table=t.name) }}" class="{{ 'active' if detail and detail.name==t.name }}">
+        <span class="db-dot" style="background:{{ t.color }}"></span>
+        <span class="db-t-name">{{ t.label }}</span>
+        <span class="db-t-code">{{ t.name }}</span>
+        <span class="db-t-count">{{ t.count }}</span>
+        <span class="db-share"><i style="width:{{ t.share }}%;background:{{ t.color }}"></i></span>
+      </a>
+      {% endfor %}
+    </div>
+    <div class="db-file">
+      <div class="muted">数据库文件</div>
+      <code class="db-path">{{ info.path }}</code>
+      <div class="muted">{{ info.size_kb }} KB · SQLite · 只读连接</div>
+    </div>
+  </div>
+
+  {% if detail %}
+  <div class="card db-main">
+    <div class="db-head">
+      <div>
+        <h2>{{ detail.label }}
+          <span class="badge" style="background:{{ detail.color }}1f;color:{{ detail.color }}">{{ detail.category }}</span>
+          <code>{{ detail.name }}</code>
+        </h2>
+        <div class="muted">共 {{ detail.total|num }} 条记录{% if info.keyword %}（匹配“{{ info.keyword }}”）{% endif %}</div>
+      </div>
+      <div class="db-actions">
+        <form class="filters" method="get">
+          <input type="hidden" name="table" value="{{ detail.name }}">
+          <div><input name="q" value="{{ info.keyword }}" placeholder="搜索本表内容…"></div>
+          <div><button class="btn">搜索</button></div>
+        </form>
+        <a class="btn o" href="{{ url_for('database.export', table=detail.name, q=info.keyword) }}">导出 CSV</a>
+      </div>
+    </div>
+
+    <details class="db-schema">
+      <summary>字段说明（{{ detail.columns|length }} 列）</summary>
+      <div class="db-cols">
+        {% for c in detail.columns %}
+        <div class="db-col-chip">
+          <b>{{ c.label }}</b><code>{{ c.name }}</code>
+          <span class="type type-{{ c.kind }}">{{ c.type }}{% if c.pk %} · 主键{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+
+    {% if detail.rows %}
+    <div class="db-table-wrap">
+      <table class="db-table">
+        <thead><tr>{% for c in detail.columns %}<th>{{ c.label }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for row in detail.rows %}
+          <tr>{% for cell in row %}{% set c = detail.columns[loop.index0] %}
+            <td class="{{ 'num' if c.kind in ('int','num') }}" title="{{ cell }}">
+            {% if c.name.startswith('is_') or c.name in ('archived','is_active','must_change_password') %}
+              <span class="cell-bool {{ 'yes' if cell in ('1','True','true') else '' }}">{{ '是' if cell in ('1','True','true') else '—' }}</span>
+            {% elif c.name == 'status' or c.name == 'mode' %}
+              <span class="pill {{ 'ok' if cell in ('成功','已识别','已完成','yolo') else ('run' if cell in ('进行中','待识别','待执行') else ('bad' if cell in ('识别失败','失败') else 'demo')) }}">{{ 'YOLO' if cell == 'yolo' else ('演示' if cell == 'opencv_demo' else cell) }}</span>
+            {% elif c.name in ('level','report_type','source') %}
+              <span class="pill plain">{{ cell }}</span>
+            {% elif c.kind == 'json' %}
+              <code class="cell-json">{{ cell }}</code>
+            {% else %}{{ cell }}{% endif %}
+            </td>
+          {% endfor %}</tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="pager">
+      {% if detail.page > 1 %}
+      <a class="btn sm o" href="{{ url_for('database.index', table=detail.name, q=info.keyword, page=detail.page-1) }}">上一页</a>
+      {% endif %}
+      <span class="muted">第 {{ detail.page }} / {{ detail.pages }} 页</span>
+      {% if detail.page < detail.pages %}
+      <a class="btn sm o" href="{{ url_for('database.index', table=detail.name, q=info.keyword, page=detail.page+1) }}">下一页</a>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty">{% if info.keyword %}没有匹配“{{ info.keyword }}”的记录{% else %}这张表还没有数据{% endif %}</div>
+    {% endif %}
+
+    <p class="hint">此页只读，用于核对数据；修改请到对应的功能页面操作，避免破坏业务关联。</p>
+  </div>
+  {% else %}
+  <div class="card"><div class="empty">数据库里还没有表，请先启动系统完成初始化。</div></div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script><script>
+const labels = {{ info.chart|map(attribute='label')|list|tojson }};
+const counts = {{ info.chart|map(attribute='count')|list|tojson }};
+const colors = {{ info.chart|map(attribute='color')|list|tojson }};
+new Chart(document.getElementById('dbChart'), {
+  type: 'bar',
+  data: { labels: labels, datasets: [{ data: counts, backgroundColor: colors, borderRadius: 6, maxBarThickness: 20 }] },
+  options: {
+    indexAxis: 'y', maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: 'rgba(60,60,67,.06)' } },
+              y: { grid: { display: false } } }
+  }
+});
+</script>{% endblock %}

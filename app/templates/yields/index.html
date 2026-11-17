@@ -1,0 +1,39 @@
+{% extends 'base.html' %}{% from 'macros.html' import confirm_delete %}{% block title %}产量估算{% endblock %}
+{% block content %}
+<div class="page-head"><h1>产量估算</h1><a class="btn" href="{{ url_for('yields.create') }}">+ 新建估产</a></div>
+<div class="card"><form class="filters" method="get">
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id==oid }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>层级</label><select name="level"><option value="">全部</option>{% for l in levels %}<option {{ 'selected' if l==level }}>{{ l }}</option>{% endfor %}</select></div>
+<div><button class="btn">查询</button></div></form></div>
+<div class="card"><h2>估产 vs 实际采收（按年）</h2>
+{% if harvest %}<table><tr><th>年份</th><th>全园估产合计(kg)</th><th>实际采收合计(kg)</th><th>估产偏差</th></tr>
+{% for r in harvest %}<tr><td>{{ r.year }}</td><td>{{ r.estimate|num }}</td><td>{{ r.actual|num }}</td>
+<td>{% if r.diff is none %}—{% else %}<span class="{{ 'up' if r.diff>0 else ('down' if r.diff<0 else 'flat') }}">{{ '%+.1f'|format(r.diff) }}%</span>{% endif %}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">还没有实际采收记录，去「采收记录」登记后即可对比。</div>{% endif %}
+<div class="hint">估产偏差 =（估产合计 − 实际采收）÷ 实际采收；正数表示估高。实际采收来自「采收记录」。</div>
+</div>
+<div class="card"><h2>全园估产月度趋势（同比 / 环比）</h2>
+{% if trend.rows %}<table><tr><th>月份</th><th>估产合计（kg）</th><th>环比（上月）</th><th>同比（去年同月）</th></tr>
+{% for r in trend.rows %}<tr><td>{{ r.month }}</td><td>{{ r.total|num }}</td>
+<td>{% if r.mom is none %}—{% else %}<span class="{{ 'up' if r.mom>0 else ('down' if r.mom<0 else 'flat') }}">{{ '%+.1f'|format(r.mom) }}%</span>{% endif %}</td>
+<td>{% if r.yoy is none %}—{% else %}<span class="{{ 'up' if r.yoy>0 else ('down' if r.yoy<0 else 'flat') }}">{{ '%+.1f'|format(r.yoy) }}%</span>{% endif %}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">还没有“全园”层级的估产记录，暂无法计算同比 / 环比。</div>{% endif %}
+{% if trend.rows and not trend.has_mom %}<div class="hint">环比需要相邻两个自然月的全园估产数据，当前数据不足。</div>{% endif %}
+{% if trend.rows and not trend.has_yoy %}<div class="hint">同比需要去年同月的全园估产数据，当前数据不足（系统启用不足一年时属正常）。</div>{% endif %}
+{% if trend.demo %}<div class="hint">表中包含【演示】估产记录，仅用于功能演示，不是真实产量。</div>{% endif %}
+</div>
+{% if items %}<div class="card"><h2>估产对比（按记录）</h2><div class="chart-box"><canvas id="yc"></canvas></div></div>{% endif %}
+<div class="card">{% if items %}
+<table><tr><th>#</th><th>层级</th><th>果园 / 地块</th><th>来源批次</th><th>样本果/树</th><th>目标树数</th><th>校正</th><th>单果重(g)</th><th>预计果数</th><th>预计产量(kg)</th><th>时间</th><th></th></tr>
+{% for y in items %}<tr><td><a href="{{ url_for('yields.detail', yid=y.id) }}">{{ y.id }}</a></td><td>{{ y.level }}{% if y.is_demo %} <span class="badge b-demo">演示</span>{% endif %}</td>
+<td>{{ y.orchard.name }}{% if y.plot %} / {{ y.plot.code }}{% endif %}</td><td>{{ y.plan.name if y.plan else '—' }}</td>
+<td>{{ y.sample_fruit_count }}/{{ y.sample_tree_count }}</td><td>{{ y.target_tree_count|num }}</td><td>{{ y.correction_factor }}</td><td>{{ y.avg_fruit_weight_g|num }}</td>
+<td>{{ y.est_fruit_count|round|int }}</td><td><b>{{ y.est_yield_kg|num }}</b></td><td>{{ y.created_at|dt }}</td>
+<td class="nowrap"><a class="btn sm o" href="{{ url_for('yields.detail', yid=y.id) }}">详情</a> {{ confirm_delete(url_for('yields.delete', yid=y.id)) }}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">暂无估产记录。估产需先有已识别的巡检影像，并在影像上填写样本树数。</div>{% endif %}</div>
+{% endblock %}
+{% block scripts %}{% if items %}<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script><script>
+const items={{ items|map(attribute='id')|list|tojson }};
+new Chart(yc,{type:'bar',data:{labels:{{ items|map(attribute='id')|map('string')|list|tojson }}.map((id,i)=>'#'+id+' '+{{ items|map(attribute='level')|list|tojson }}[i]),
+datasets:[{label:'预计产量(kg)',data:{{ items|map(attribute='est_yield_kg')|list|tojson }},backgroundColor:'#ff9500',borderRadius:10,maxBarThickness:72}]},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
+</script>{% endif %}{% endblock %}

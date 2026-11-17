@@ -1,0 +1,38 @@
+{% extends 'base.html' %}{% from 'macros.html' import mode_badge %}{% block title %}识别结果{% endblock %}
+{% block content %}
+<div class="page-head"><h1>识别结果查询与汇总</h1></div>
+<div class="card"><form class="filters" method="get">
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id|string==args.get('orchard_id') }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>地块</label><select name="plot_id"><option value="">全部</option>{% for p in plots %}<option value="{{ p.id }}" {{ 'selected' if p.id|string==args.get('plot_id') }}>{{ p.orchard.name }}/{{ p.code }}</option>{% endfor %}</select></div>
+<div><label>批次</label><select name="plan_id"><option value="">全部</option>{% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if p.id|string==args.get('plan_id') }}>{{ p.name }}</option>{% endfor %}</select></div>
+<div><label>类别</label><select name="class_name"><option value="">全部</option>{% for c in classes %}<option {{ 'selected' if c==args.get('class_name') }}>{{ c }}</option>{% endfor %}</select></div>
+<div><label>识别日期从</label><input type="date" name="date_from" value="{{ args.get('date_from','') }}"></div>
+<div><label>至</label><input type="date" name="date_to" value="{{ args.get('date_to','') }}"></div>
+<div><button class="btn">查询</button> <a class="btn o" href="{{ url_for('results.index') }}">重置</a></div></form>
+<div class="hint">每张影像取最近一次成功识别的记录参与统计。</div></div>
+{% if summary.demo_images %}<div class="notice">其中 {{ summary.demo_images }} 张影像的结果来自 OpenCV 演示模式（非深度学习），仅供流程演示。</div>{% endif %}
+<div class="grid g4">
+<div class="stat"><div class="l">已识别影像</div><div class="v">{{ summary.images }}</div></div>
+<div class="stat"><div class="l">模型检测总数（原始）</div><div class="v">{{ summary.model_total }}</div></div>
+<div class="stat"><div class="l">复核后总数</div><div class="v">{{ summary.effective_total }}</div><div class="s">未复核的影像沿用模型数</div></div>
+<div class="stat"><div class="l">经人工复核影像</div><div class="v">{{ summary.reviewed_images }}</div></div>
+</div>
+<div class="grid g3">
+<div class="card"><h2>类别统计{% if args.get('class_name') %}（{{ args.get('class_name') }}）{% endif %}</h2>{% if summary.class_counts %}<div class="chart-box"><canvas id="c1"></canvas></div>{% else %}<div class="empty">暂无数据</div>{% endif %}</div>
+<div class="card"><h2>相对大小等级</h2>{% if summary.size_counts %}<div class="chart-box"><canvas id="c2"></canvas></div><div class="hint">基于检测框像素占比，非真实果径</div>{% else %}<div class="empty">暂无数据</div>{% endif %}</div>
+<div class="card"><h2>成熟度（颜色估算）</h2>{% if summary.maturity_counts %}<div class="chart-box"><canvas id="c3"></canvas></div><div class="hint">框内橙黄色/绿色像素比例，非模型分类</div>{% else %}<div class="empty">暂无数据</div>{% endif %}</div>
+</div>
+<div class="card"><h2>明细</h2>{% if rows %}
+<table><tr><th>影像</th><th>果园</th><th>批次</th><th>识别方式</th><th>模型数</th><th>复核数</th><th>类别</th><th>识别时间</th></tr>
+{% for run, img, plan in rows %}<tr><td><a href="{{ url_for('images.detail', iid=img.id, run_id=run.id) }}">{{ img.original_name|truncate(24) }}</a></td>
+<td>{{ plan.orchard.name }}</td><td>{{ plan.name }}</td><td>{{ mode_badge(run) }}</td><td>{{ run.total_count }}</td>
+<td>{{ run.reviewed_count if run.reviewed_count is not none else '—' }}</td><td>{% for k,v in run.class_counts.items() %}{{ k }}:{{ v }} {% endfor %}</td><td>{{ run.created_at|dt }}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">没有符合条件的识别结果</div>{% endif %}</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script><script>
+const C=['#e8851e','#3f8f3a','#2e86c1','#d4ac0d','#8e44ad','#16a085','#c0392b','#7f8c8d'];
+const cc={{ summary.class_counts|tojson }}, sc={{ summary.size_counts|tojson }}, mc={{ summary.maturity_counts|tojson }};
+if(document.getElementById('c1'))new Chart(c1,{type:'bar',data:{labels:Object.keys(cc),datasets:[{label:'数量',data:Object.values(cc),backgroundColor:C}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+if(document.getElementById('c2'))new Chart(c2,{type:'doughnut',data:{labels:Object.keys(sc),datasets:[{data:Object.values(sc),backgroundColor:C}]},options:{maintainAspectRatio:false}});
+if(document.getElementById('c3'))new Chart(c3,{type:'doughnut',data:{labels:Object.keys(mc),datasets:[{data:Object.values(mc),backgroundColor:['#34c759','#ffcc00','#ff9500']}]},options:{maintainAspectRatio:false}});
+</script>{% endblock %}

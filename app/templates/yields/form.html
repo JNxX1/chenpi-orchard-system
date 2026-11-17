@@ -1,0 +1,39 @@
+{% extends 'base.html' %}{% block title %}新建估产{% endblock %}
+{% block content %}
+<div class="page-head"><h1>新建产量估算</h1></div>
+<div class="notice"><b>估产公式：</b>样本平均可见果数 = 样本检测果数 ÷ 样本树数；预计总果数 = 样本平均可见果数 × 目标树数 × 校正系数；预计产量(kg) = 预计总果数 × 平均单果重(g) ÷ 1000。<br>
+样本树数 = 参与统计的影像所覆盖的树木数量之和（在影像上填写），避免把整地块结果再乘以树数而重复计算。校正系数用于补偿遮挡与背面不可见果实，建议用人工实数样本树测定（实际果数 ÷ 可见果数）。</div>
+<div class="card"><form method="post" id="yf"><div class="form-grid">
+<div><label>数据来源批次 <span class="req">*</span></label><select name="plan_id" id="plan_id" required><option value="">请选择</option>
+{% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if p.id|string==form.get('plan_id') }}>{{ p.name }}（{{ p.orchard.name }}/{{ p.plot.label if p.plot else '全园' }}）</option>{% endfor %}</select></div>
+<div><label>估产层级 <span class="req">*</span></label><select name="level" id="level">{% for l in levels %}<option {{ 'selected' if l==form.get('level','地块') }}>{{ l }}</option>{% endfor %}</select></div>
+<div><label>计数来源</label><select name="count_source" id="count_source"><option value="reviewed" {{ 'selected' if form.get('count_source')!='model' }}>优先人工复核数</option><option value="model" {{ 'selected' if form.get('count_source')=='model' }}>仅模型原始数</option></select></div>
+<div id="plot_box"><label>地块（地块级）</label><select name="plot_id" id="plot_id"><option value="">使用批次地块</option>{% for p in plots %}<option value="{{ p.id }}" data-orchard="{{ p.orchard_id }}" data-trees="{{ p.tree_count or '' }}" {{ 'selected' if p.id|string==form.get('plot_id') }}>{{ p.orchard.name }}/{{ p.label }}（{{ p.tree_count or '?' }} 株）</option>{% endfor %}</select></div>
+<div class="full" id="sample_info"><div class="hint">选择批次后自动汇总样本</div></div>
+<div><label>样本检测果数</label><input type="number" min="0" name="sample_fruit_count" id="sf" value="{{ form.get('sample_fruit_count','') }}" placeholder="留空=使用批次汇总"></div>
+<div><label>样本树数</label><input type="number" min="1" name="sample_tree_count" id="st" value="{{ form.get('sample_tree_count','') }}" placeholder="留空=使用批次汇总"></div>
+<div><label>目标树数</label><input type="number" min="1" name="target_tree_count" id="tt" value="{{ form.get('target_tree_count','') }}" placeholder="留空=按层级自动取"><div class="hint">单株固定为 1；地块取地块株数；全园取果园预计株数（为空时取地块株数之和）</div></div>
+<div><label>校正系数 <span class="req">*</span></label><input type="number" step="0.01" min="0.01" name="correction_factor" id="cf" value="{{ form.get('correction_factor','1.0') }}" required></div>
+<div><label>平均单果重（g） <span class="req">*</span></label><input type="number" step="0.1" min="0.1" name="avg_fruit_weight_g" id="wg" value="{{ form.get('avg_fruit_weight_g','') }}" required><div class="hint">请按实际抽样称重填写</div></div>
+<div class="full"><label>备注</label><textarea name="remark">{{ form.get('remark','') }}</textarea></div>
+<div class="full notice" id="preview">填写参数后显示预估结果</div>
+</div><p><button class="btn">计算并保存</button> <a class="btn o" href="{{ url_for('yields.index') }}">取消</a></p></form></div>
+{% endblock %}
+{% block scripts %}<script>
+let S=null;const $=id=>document.getElementById(id);
+async function load(){const pid=$('plan_id').value;if(!pid){S=null;$('sample_info').innerHTML='<div class="hint">选择批次后自动汇总样本</div>';calc();return;}
+const r=await fetch(`{{ url_for('yields.index') }}samples/${pid}?source=${$('count_source').value}`);S=await r.json();
+let h=`批次样本：参与影像 <b>${S.images}</b> 张，检测果数 <b>${S.fruit}</b>，样本树数 <b>${S.trees}</b>`;
+if(S.skipped.length)h+=`<br><span style="color:#c0392b">${S.skipped.length} 张已识别影像未填写样本树数，未计入样本</span>`;
+if(S.unrecognized)h+=`<br><span style="color:#c0392b">${S.unrecognized} 张影像尚未成功识别</span>`;
+if(S.demo_images)h+=`<br><span class="badge b-demo">含 ${S.demo_images} 张演示模式结果</span>`;
+$('sample_info').innerHTML='<div class="notice">'+h+'</div>';calc();}
+function target(){const lv=$('level').value;if(lv==='单株')return 1;if($('tt').value)return +$('tt').value;if(!S)return null;
+if(lv==='地块'){const o=$('plot_id').selectedOptions[0];return (o&&o.dataset.trees)?+o.dataset.trees:S.plot_trees;}return S.orchard_trees;}
+function calc(){$('plot_box').style.display=$('level').value==='地块'?'':'none';
+const f=$('sf').value!==''?+$('sf').value:(S?S.fruit:null),t=$('st').value!==''?+$('st').value:(S?S.trees:null),T=target(),cf=+$('cf').value,w=+$('wg').value;
+if(f==null||!t||!T||!cf||!w){$('preview').innerHTML='参数不完整：'+[!t&&'样本树数',!T&&'目标树数',!w&&'平均单果重'].filter(Boolean).join('、')+(f==null?'、样本果数':'');return;}
+const avg=f/t,n=avg*T*cf;$('preview').innerHTML=`株均可见果 ${avg.toFixed(2)} 个 × 目标树 ${T} × 校正 ${cf} = 预计 <b>${n.toFixed(0)}</b> 个果；预计产量 <b>${(n*w/1000).toFixed(2)}</b> kg`;}
+['plan_id','count_source'].forEach(i=>$(i).addEventListener('change',load));
+['level','plot_id','sf','st','tt','cf','wg'].forEach(i=>$(i).addEventListener('input',calc));load();
+</script>{% endblock %}

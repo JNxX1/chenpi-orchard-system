@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% from 'macros.html' import badge %}{% block title %}影像管理{% endblock %}
+{% block content %}
+<div class="page-head"><h1>影像管理</h1><a class="btn" href="{{ url_for('images.upload') }}">上传影像</a></div>
+<div class="card"><form class="filters" method="get">
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id|string==args.get('orchard_id') }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>地块</label><select name="plot_id"><option value="">全部</option>{% for p in plots %}<option value="{{ p.id }}" {{ 'selected' if p.id|string==args.get('plot_id') }}>{{ p.orchard.name }}/{{ p.code }}</option>{% endfor %}</select></div>
+<div><label>批次</label><select name="plan_id"><option value="">全部</option>{% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if p.id|string==args.get('plan_id') }}>{{ p.name }}</option>{% endfor %}</select></div>
+<div><label>状态</label><select name="status"><option value="">全部</option>{% for s in statuses %}<option {{ 'selected' if s==args.get('status') }}>{{ s }}</option>{% endfor %}</select></div>
+<div><label>归档</label><select name="archived"><option value="">全部</option><option value="1" {{ 'selected' if args.get('archived')=='1' }}>已归档</option><option value="0" {{ 'selected' if args.get('archived')=='0' }}>未归档</option></select></div>
+<div><label>异常</label><select name="abnormal"><option value="">全部</option><option value="1" {{ 'selected' if args.get('abnormal')=='1' }}>仅异常</option></select></div>
+<div><button class="btn">查询</button> <a class="btn o" href="{{ url_for('images.index') }}">重置</a></div></form></div>
+<div class="card">
+{% if page.items %}<p class="muted">共 {{ page.total }} 张</p><div class="thumbs">
+{% for img in page.items %}{% set r = img.latest_run %}
+<a class="thumb" href="{{ url_for('images.detail', iid=img.id) }}"><img loading="lazy" src="{{ url_for('images.file', iid=img.id, kind='original') }}" alt="">
+<div class="meta">{{ img.original_name|truncate(22) }}<br><span class="muted">{{ img.plan.orchard.name }} · {{ img.plan.name|truncate(14) }}</span><br>
+{{ badge(img.status) }}{% if r %} <b>{{ r.effective_count }}</b> 个{% if r.mode != 'yolo' %} <span class="badge b-demo">演示</span>{% endif %}{% endif %}
+{% if img.archived %} <span class="badge">已归档</span>{% endif %}{% if img.is_abnormal %} <span class="badge b-异常">异常</span>{% endif %}</div></a>
+{% endfor %}</div>
+<div class="pager">{% if page.has_prev %}<a class="btn sm o" href="{{ url_for('images.index', page=page.prev_num, **args.to_dict()|dict_without_page) }}">上一页</a>{% endif %}
+<span class="muted">第 {{ page.page }} / {{ page.pages }} 页</span>
+{% if page.has_next %}<a class="btn sm o" href="{{ url_for('images.index', page=page.next_num, **args.to_dict()|dict_without_page) }}">下一页</a>{% endif %}</div>
+{% else %}<div class="empty">没有符合条件的影像</div>{% endif %}</div>
+{% endblock %}

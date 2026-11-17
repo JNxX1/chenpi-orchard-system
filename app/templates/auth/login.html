@@ -1,0 +1,34 @@
+{% set title = "登录" %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 - 陈皮柑果园智慧管理系统</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+<div class="login-wrap">
+  <a class="login-back" href="{{ url_for('main.landing') }}">‹ 返回首页</a>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="logo">🍊</div>
+      <h1>陈皮柑果园智慧管理系统</h1>
+      <p class="muted">巡检 · 识别 · 估产 · 报表</p>
+    </div>
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('auth.login') }}">
+      <input type="hidden" name="next" value="{{ next or '' }}">
+      <label>用户名</label>
+      <input name="username" value="{{ username or '' }}" autocomplete="username" autofocus required>
+      <label>密码</label>
+      <input name="password" type="password" autocomplete="current-password" required>
+      <button class="btn login-btn" type="submit">登 录</button>
+    </form>
+    <p class="hint login-hint">首次使用：管理员账号 admin，初始密码见 README 或 .env 中的 ADMIN_PASSWORD。</p>
+  </div>
+  <p class="login-foot">广东交通职业技术学院 · 人工智能技术应用专业 · 毕业设计</p>
+</div>
+</body>
+</html>

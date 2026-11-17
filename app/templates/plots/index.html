@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% from 'macros.html' import confirm_delete %}{% block title %}地块管理{% endblock %}
+{% block content %}
+<div class="page-head"><h1>地块管理</h1><a class="btn" href="{{ url_for('plots.create', orchard_id=oid) }}">+ 新增地块</a></div>
+<div class="grid g4">
+  <div class="stat"><div class="l">地块</div><div class="v">{{ summary.count }}</div><div class="s">当前筛选结果</div></div>
+  <div class="stat"><div class="l">总面积</div><div class="v">{{ summary.area|num }} 亩</div><div class="s">地块面积合计</div></div>
+  <div class="stat"><div class="l">株数</div><div class="v">{{ summary.trees|num }}</div><div class="s">地块级估产目标树数</div></div>
+  <div class="stat"><div class="l">巡检计划</div><div class="v">{{ summary.plans }}</div><div class="s">关联到这些地块</div></div>
+</div>
+<div class="card"><form class="filters" method="get">
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id==oid }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>关键字</label><input name="q" value="{{ q }}" placeholder="编号 / 名称"></div>
+<div><button class="btn">查询</button></div></form></div>
+<div class="card">{% if plots %}
+<table><tr><th>果园</th><th>地块编号</th><th>名称</th><th>面积(亩)</th><th>株数</th><th>品种</th><th>巡检计划数</th><th>操作</th></tr>
+{% for p in plots %}<tr><td><a href="{{ url_for('orchards.detail', oid=p.orchard_id) }}">{{ p.orchard.name }}</a></td><td>{{ p.code }}</td><td>{{ p.name or '—' }}</td>
+<td>{{ p.area_mu|num }}</td><td>{{ p.tree_count|num }}</td><td>{{ p.variety or '—' }}</td><td>{{ p.plans.count() }}</td>
+<td class="nowrap"><a class="btn sm o" href="{{ url_for('plots.edit', pid=p.id) }}">编辑</a> {{ confirm_delete(url_for('plots.delete', pid=p.id)) }}</td></tr>{% endfor %}</table>
+{% else %}<div class="empty">暂无地块数据{% if not orchards %}，请先<a href="{{ url_for('orchards.create') }}">新增果园</a>{% endif %}。</div>{% endif %}</div>
+{% endblock %}

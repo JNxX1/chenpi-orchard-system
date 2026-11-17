@@ -1,0 +1,14 @@
+{% macro field(name, label, value='', type='text', required=false, hint='', attrs='') -%}
+<div>
+  <label for="{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {% if required %}required{% endif %} {{ attrs|safe }}>
+  {% if hint %}<div class="hint">{{ hint }}</div>{% endif %}
+</div>
+{%- endmacro %}
+{% macro confirm_delete(action, text='删除') -%}
+<form class="inline" method="post" action="{{ action }}" onsubmit="return confirm('确定{{ text }}吗？此操作不可撤销。')"><button class="btn sm d">{{ text }}</button></form>
+{%- endmacro %}
+{% macro badge(s) -%}<span class="badge b-{{ s }}">{{ s }}</span>{%- endmacro %}
+{% macro mode_badge(run) -%}
+{% if run.mode == 'yolo' %}<span class="badge b-成功">YOLO 模型</span>{% else %}<span class="badge b-demo">演示模式·非深度学习</span>{% endif %}
+{%- endmacro %}

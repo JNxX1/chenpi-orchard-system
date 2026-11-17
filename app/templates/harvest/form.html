@@ -1,0 +1,21 @@
+{% extends 'base.html' %}{% block title %}新增采收记录{% endblock %}
+{% block content %}
+<div class="page-head"><h1>新增采收记录</h1><a class="btn o" href="{{ url_for('harvest.index') }}">返回列表</a></div>
+<div class="card" style="max-width:760px">
+<form method="post"><div class="form-grid">
+<div><label>果园 <span class="req">*</span></label><select name="orchard_id" id="orchard" required>
+<option value="">请选择</option>
+{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if form.get('orchard_id')==o.id|string }}>{{ o.name }}</option>{% endfor %}
+</select></div>
+<div><label>地块（可空，空=全园）</label><select name="plot_id">
+<option value="">全园</option>
+{% for p in plots %}<option value="{{ p.id }}" data-orchard="{{ p.orchard_id }}" {{ 'selected' if form.get('plot_id')==p.id|string }}>{{ p.orchard.name }} / {{ p.label }}</option>{% endfor %}
+</select></div>
+<div><label>年份 <span class="req">*</span></label><input type="number" name="year" min="2000" max="2100" value="{{ form.get('year', this_year) }}" required></div>
+<div><label>实际产量（kg） <span class="req">*</span></label><input type="number" step="0.1" min="0" name="actual_yield_kg" value="{{ form.get('actual_yield_kg','') }}" required></div>
+<div><label>均价（元/kg，可空）</label><input type="number" step="0.1" min="0" name="avg_price" value="{{ form.get('avg_price','') }}"></div>
+<div class="full"><label>备注</label><textarea name="remark">{{ form.get('remark','') }}</textarea>
+<div class="hint">只登记真实采收数据；演示数据请注明“演示”。</div></div>
+</div><p><button class="btn">保存</button></p></form>
+</div>
+{% endblock %}

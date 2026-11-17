@@ -1,0 +1,30 @@
+{% extends 'base.html' %}{% block title %}上传影像{% endblock %}
+{% block content %}
+<div class="page-head"><h1>上传巡检影像</h1></div>
+{% include '_model_notice.html' %}
+{% if not plans %}<div class="notice">请先<a href="{{ url_for('plans.create') }}">创建巡检计划</a>，影像需归属于某个巡检批次。</div>{% endif %}
+<div class="card"><form method="post" enctype="multipart/form-data" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').innerText='上传中…'">
+<div class="form-grid">
+<div class="full"><label>巡检计划 / 批次 <span class="req">*</span></label><select name="plan_id" required><option value="">请选择</option>
+{% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if p.id==selected }}>{{ p.name }}（{{ p.orchard.name }} / {{ p.plot.label if p.plot else '全园' }}）</option>{% endfor %}</select></div>
+<div class="full"><label>选择图片 <span class="req">*</span></label>
+<label class="file-pick" for="files"><span class="file-pick-icon">＋</span><span class="file-pick-text"><b>选择图片</b><small>支持 JPG / JPEG / PNG，可多选，单张不超过 {{ config.MAX_IMAGE_SIZE // 1024 // 1024 }} MB</small></span></label>
+<input type="file" name="files" id="files" class="file-input" multiple accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
+<div class="hint">系统会校验图片真实内容并自动生成安全文件名，原图与识别结果图分开保存。</div>
+<div class="thumbs" id="preview" style="margin-top:12px"></div></div>
+<div><label>每张图覆盖的样本树数</label><input type="number" name="sample_trees" min="1" placeholder="如 1（单株拍摄）">
+<div class="hint">用于样本估产；整批相同时在此统一填写，也可在影像详情中逐张修改</div></div>
+<div><label>采集方式</label><select name="source"><option value="">跟随巡检计划</option>
+{% for s in ['无人机航拍','手持拍摄','固定摄像头','其他'] %}<option>{{ s }}</option>{% endfor %}</select>
+<div class="hint">记录这张影像的来源，便于区分无人机与手机照片</div></div>
+<div class="full"><label>采集位置（可选）</label><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="number" step="any" name="latitude" placeholder="纬度" style="max-width:200px"><input type="number" step="any" name="longitude" placeholder="经度" style="max-width:200px"></div>
+<div class="hint">照片自带 EXIF GPS 时会自动读取；没有就留空，也可在这里手工填写</div></div>
+<div class="full"><label class="switch"><input type="checkbox" name="auto_recognize" value="1" checked><span>上传后立即自动识别</span></label></div>
+</div><p><button class="btn">上传</button></p></form></div>
+{% endblock %}
+{% block scripts %}<script>
+document.getElementById('files').addEventListener('change',e=>{const box=document.getElementById('preview');box.innerHTML='';
+[...e.target.files].forEach(f=>{const d=document.createElement('div');d.className='thumb';const ok=/\.(jpe?g|png)$/i.test(f.name);
+d.innerHTML=(ok?`<img src="${URL.createObjectURL(f)}">`:'<div class="empty">格式不支持</div>')+`<div class="meta"></div>`;
+d.querySelector('.meta').textContent=`${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`;box.appendChild(d);});});
+</script>{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% block title %}报表中心{% endblock %}
+{% block content %}
+<div class="page-head"><h1>报表中心</h1></div>
+<div class="card"><form class="filters" method="get" id="rf">
+<div><label>报表类型</label><select name="report_type">{% for k,v in types.items() %}<option value="{{ k }}" {{ 'selected' if k==args.get('report_type') }}>{{ v }}</option>{% endfor %}</select></div>
+<div><label>果园</label><select name="orchard_id"><option value="">全部</option>{% for o in orchards %}<option value="{{ o.id }}" {{ 'selected' if o.id|string==args.get('orchard_id') }}>{{ o.name }}</option>{% endfor %}</select></div>
+<div><label>巡检批次</label><select name="plan_id"><option value="">全部</option>{% for p in plans %}<option value="{{ p.id }}" {{ 'selected' if p.id|string==args.get('plan_id') }}>{{ p.name }}</option>{% endfor %}</select></div>
+<div><label>识别日期从</label><input type="date" name="date_from" value="{{ args.get('date_from','') }}"></div>
+<div><label>至</label><input type="date" name="date_to" value="{{ args.get('date_to','') }}"></div>
+<div><button class="btn">生成预览</button></div></form></div>
+{% if rep %}
+<div class="card"><div class="page-head"><h2>{{ rep.title }}</h2>
+<div>{% for fmt,label in [('xlsx','导出 Excel'),('pdf','导出 PDF')] %}
+<form class="inline" method="post" action="{{ url_for('reports.export') }}">{% for k in ['report_type','orchard_id','plan_id','date_from','date_to'] %}<input type="hidden" name="{{ k }}" value="{{ args.get(k,'') }}">{% endfor %}
+<input type="hidden" name="fmt" value="{{ fmt }}"><button class="btn {{ 'g' if fmt=='xlsx' else '' }}">{{ label }}</button></form> {% endfor %}</div></div>
+<dl class="kv">{% for k,v in rep.meta %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+{% for w in rep.warnings %}<div class="notice" style="margin-top:8px">{{ w }}</div>{% endfor %}
+{% for sec in rep.sections %}<h2 style="margin-top:16px">{{ sec.title }}</h2>
+{% if sec.rows %}<table><tr>{% for h in sec.header %}<th>{{ h }}</th>{% endfor %}</tr>{% for r in sec.rows %}<tr>{% for c in r %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</table>
+{% else %}<div class="muted">{{ sec.note or '无数据' }}</div>{% endif %}{% endfor %}
+</div>{% endif %}
+<div class="card"><h2>已导出报表（归档）</h2>{% if history %}
+<table><tr><th>#</th><th>标题</th><th>格式</th><th>生成时间</th><th></th></tr>
+{% for h in history %}<tr><td>{{ h.id }}</td><td>{{ h.title }}</td><td>{{ h.fmt|upper }}</td><td>{{ h.created_at|dt }}</td><td><a href="{{ url_for('reports.download', rid=h.id) }}">下载</a></td></tr>{% endfor %}</table>
+{% else %}<div class="empty">暂无导出记录</div>{% endif %}</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% from '_icons.html' import nav_icon %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{% endblock %} - 陈皮柑果园智慧管理系统</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('main.landing') }}" title="返回首页">
+      <div class="logo">🍊</div>
+      <div>陈皮柑果园<br>智慧管理系统<small>巡检 · 识别 · 估产 · 报表</small></div>
+    </a>
+    <nav>
+      {% set ep = request.endpoint or '' %}
+      {% for bp_name, label in [('main','首页驾驶舱'),('orchards','果园管理'),('plots','地块管理'),('plans','巡检计划'),('images','影像管理'),('live','实时识别'),('results','识别结果'),('yields','产量估算'),('harvest','采收记录'),('reports','报表中心'),('assistant','业务助手'),('database','数据浏览')] %}
+      <a href="{{ url_for(bp_name + ('.dashboard' if bp_name=='main' else '.index')) }}" class="{{ 'active' if ep.split('.')[0]==bp_name }}">{{ nav_icon(bp_name) }}<span>{{ label }}</span></a>
+      {% endfor %}
+    </nav>
+    {% if current_user %}
+    <div class="sidebar-user">
+      <div class="u-name">{{ current_user.name }}<span class="u-role">{{ current_user.role }}</span></div>
+      <div class="u-actions">
+        <a href="{{ url_for('auth.password') }}">修改密码</a>
+        <form method="post" action="{{ url_for('auth.logout') }}"><button type="submit">退出</button></form>
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+  <main class="main">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% if current_user and current_user.must_change_password %}
+      <div class="notice red">你正在使用初始密码，<a href="{{ url_for('auth.password') }}">请立即修改密码</a>。</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div id="lightbox"><img alt="放大查看"></div>
+<script>
+document.addEventListener('click', function (e) {
+  var box = document.getElementById('lightbox');
+  var img = e.target.closest && e.target.closest('img.zoomable');
+  if (img) { box.querySelector('img').src = img.src; box.classList.add('on'); }
+  else if (e.target.closest && e.target.closest('#lightbox')) { box.classList.remove('on'); }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') document.getElementById('lightbox').classList.remove('on');
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

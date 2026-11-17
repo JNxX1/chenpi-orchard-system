@@ -1,0 +1,205 @@
+{% from '_icons.html' import nav_icon %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>陈皮柑果园智慧管理系统</title>
+<meta name="description" content="新会陈皮柑果园巡检、AI 识别、分级统计与可追溯估产系统">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body>
+
+<header class="lp-nav" id="top">
+  <div class="lp-nav-inner">
+    <a class="lp-logo" href="{{ url_for('main.landing') }}"><span class="lp-mark">🍊</span> 陈皮柑 · 智慧果园</a>
+    <nav class="lp-links">
+      <a href="#features">功能</a>
+      <a href="#modules">模块</a>
+      <a href="#model">模型</a>
+      <a href="#flow">流程</a>
+    </nav>
+    <div class="lp-actions">
+      {% if current_user %}
+      <span class="lp-user">{{ current_user.name }}</span>
+      <a class="lp-btn mini" href="{{ url_for('main.dashboard') }}">进入控制台</a>
+      {% else %}
+      <a class="lp-btn mini" href="{{ url_for('auth.login') }}">登录系统</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<section class="lp-hero">
+  <div class="lp-slides">
+    <div class="lp-slide is-on" style="background-image:url('{{ url_for('static', filename='img/hero/hero-orchard-mountains.jpg') }}')"></div>
+    <div class="lp-slide" style="background-image:url('{{ url_for('static', filename='img/hero/hero-orchard-sunrise.jpg') }}')"></div>
+    <div class="lp-slide" style="background-image:url('{{ url_for('static', filename='img/hero/hero-oranges-branch.jpg') }}')"></div>
+    <div class="lp-slide" style="background-image:url('{{ url_for('static', filename='img/hero/hero-orchard-dense.jpg') }}')"></div>
+  </div>
+  <div class="lp-veil"></div>
+  <div class="lp-hero-inner">
+    <p class="lp-eyebrow">新会陈皮柑 · 智慧果园管理系统</p>
+    <h1>让每一颗陈皮柑<br>都被看见。</h1>
+    <p class="lp-sub">巡检影像自动识别、分级统计、可追溯估产与一键报表。<br>把果园里的经验，变成可以核对的数据。</p>
+    <div class="lp-cta">
+      <a class="lp-btn" href="{{ url_for('main.dashboard') if current_user else url_for('auth.login') }}">进入系统</a>
+      <a class="lp-btn ghost" href="#features">了解功能</a>
+    </div>
+    <div class="lp-dots" role="tablist" aria-label="首屏图片切换">
+      <button class="is-on" aria-label="第 1 张"></button>
+      <button aria-label="第 2 张"></button>
+      <button aria-label="第 3 张"></button>
+      <button aria-label="第 4 张"></button>
+    </div>
+  </div>
+</section>
+
+<section class="lp-modules" id="modules">
+  <div class="lp-wrap">
+    <div class="lp-module-row">
+      {% for bp, label, href in [('main','驾驶舱','main.dashboard'),('orchards','果园','orchards.index'),('plans','巡检','plans.index'),('images','影像','images.index'),('results','识别','results.index'),('yields','估产','yields.index'),('reports','报表','reports.index'),('database','数据','database.index')] %}
+      <a class="lp-module" href="{{ url_for(href) }}">
+        <span class="lp-module-icon">{{ nav_icon(bp) }}</span>
+        <span>{{ label }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="lp-features" id="features">
+  <div class="lp-wrap">
+    <h2 class="lp-h2">全流程，一处完成。</h2>
+    <p class="lp-lead">从建园到报表，每一步都落在同一个数据库里，数字可以一路追溯回那张照片。</p>
+
+    <div class="lp-tile wide dark">
+      <div class="lp-tile-copy">
+        <p class="lp-kicker">AI 识别</p>
+        <h3>上传即识别，框选可核对。</h3>
+        <p>YOLOv8 检测树上果实，保存每个检测框的坐标、置信度与相对大小；支持人工复核，模型结果与复核结果分开保存。</p>
+        <a class="lp-link" href="{{ url_for('live.index') }}">试试实时识别 ›</a>
+      </div>
+      <div class="lp-tile-media">
+        <img src="{{ url_for('static', filename='img/screens/image-detail.jpg') }}" alt="影像详情：原图与识别结果图">
+      </div>
+    </div>
+
+    <div class="lp-grid">
+      <div class="lp-tile">
+        <p class="lp-kicker">数据驾驶舱</p>
+        <h3>果园状态，一眼看完。</h3>
+        <p>果园、地块、巡检进度、识别数量与估产结果，全部来自数据库实时统计。</p>
+        <img src="{{ url_for('static', filename='img/screens/dashboard.jpg') }}" alt="数据驾驶舱">
+      </div>
+      <div class="lp-tile">
+        <p class="lp-kicker">估产与报表</p>
+        <h3>每个数字都有公式。</h3>
+        <p>单株 / 地块 / 全园三级估产，参数与公式全部留痕；巡检、分级、估产报表一键导出 Excel 与 PDF。</p>
+        <img src="{{ url_for('static', filename='img/screens/yields.jpg') }}" alt="产量估算页面">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-gallery">
+  <div class="lp-wrap">
+    <h2 class="lp-h2">果园里的每一个瞬间。</h2>
+    <p class="lp-lead">行间巡检、青果转色、采收称重——照片按批次归档，识别结果与每一次巡检一一对应。</p>
+    <div class="lp-gallery-grid">
+      <figure><img src="{{ url_for('static', filename='img/scene/scene-orchard-rows.jpg') }}" alt="果园行间"><figcaption>标准果园 · 行间巡检路线</figcaption></figure>
+      <figure><img src="{{ url_for('static', filename='img/scene/scene-green-citrus.jpg') }}" alt="青果"><figcaption>青果期 · 颜色未转，识别需人工确认</figcaption></figure>
+      <figure><img src="{{ url_for('static', filename='img/scene/scene-tree-close.jpg') }}" alt="近景果实"><figcaption>近景果实 · 叶片遮挡与密集果串</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="lp-stats">
+  <div class="lp-wrap lp-stat-grid">
+    <div><b>{{ d.orchards }}</b><span>果园</span></div>
+    <div><b>{{ d.plots }}</b><span>地块</span></div>
+    <div><b>{{ d.images }}</b><span>巡检影像</span></div>
+    <div><b>{{ d.summary.effective_total }}</b><span>识别目标</span></div>
+  </div>
+</section>
+
+<section class="lp-model" id="model">
+  <div class="lp-wrap">
+    <p class="lp-kicker">当前模型</p>
+    <h2 class="lp-h2">YOLOv8n · 果园橙类检测</h2>
+    <p class="lp-lead">基于公开果园数据集 Oranges in the field（5025 张实拍，CC BY-NC 3.0）微调，验证集 400 张 / 2844 个标注框。</p>
+    <div class="lp-metrics">
+      <div><b>0.807</b><span>Precision</span></div>
+      <div><b>0.736</b><span>Recall</span></div>
+      <div><b>0.801</b><span>mAP@50</span></div>
+      <div><b>15 ms</b><span>单张推理</span></div>
+    </div>
+    <p class="lp-note">说明：训练数据为国外橙园，模型不是新会陈皮柑专用模型；成熟度按框内颜色估算（青/转色/成熟），不是模型分类；页面与报表均按此标注。</p>
+  </div>
+</section>
+
+<section class="lp-flow" id="flow">
+  <div class="lp-wrap">
+    <h2 class="lp-h2">四步，跑完一次巡检。</h2>
+    <div class="lp-steps">
+      <div><span>01</span><h4>建立档案</h4><p>果园、地块、株数与种植信息入库。</p></div>
+      <div><span>02</span><h4>上传影像</h4><p>按巡检批次归档，自动校验与安全存储。</p></div>
+      <div><span>03</span><h4>识别复核</h4><p>模型检出果实，人工修正数量。</p></div>
+      <div><span>04</span><h4>估产报表</h4><p>按公式估算产量，导出归档。</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-cta-band">
+  <div class="lp-wrap">
+    <h2>准备好看看你的果园了吗？</h2>
+    <p>登录后从驾驶舱开始，或先试一次实时识别。</p>
+    <div class="lp-cta">
+      <a class="lp-btn" href="{{ url_for('main.dashboard') if current_user else url_for('auth.login') }}">进入系统</a>
+      <a class="lp-btn ghost-light" href="{{ url_for('live.index') }}">实时识别</a>
+    </div>
+  </div>
+</section>
+
+<footer class="lp-footer">
+  <div class="lp-wrap">
+    <p>广东交通职业技术学院 · 信息学院 · 人工智能技术应用专业 · 毕业设计</p>
+    <p class="muted">图片素材：Pexels 免费许可（果园实景）；识别样例数据来自 Oranges in the field（UNIPA），CC BY-NC 3.0，仅用于教学演示。模型指标来自本机验证集，不代表陈皮柑专用模型。</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var slides = document.querySelectorAll('.lp-slide');
+  var dots = document.querySelectorAll('.lp-dots button');
+  if (!slides.length) return;
+  var i = 0, timer;
+  function show(n) {
+    i = (n + slides.length) % slides.length;
+    slides.forEach(function (s, k) { s.classList.toggle('is-on', k === i); });
+    dots.forEach(function (d, k) { d.classList.toggle('is-on', k === i); });
+  }
+  function play() { timer = setInterval(function () { show(i + 1); }, 5200); }
+  function stop() { clearInterval(timer); }
+  dots.forEach(function (d, k) {
+    d.addEventListener('click', function () { stop(); show(k); play(); });
+  });
+  var hero = document.querySelector('.lp-hero');
+  hero.addEventListener('mouseenter', stop);
+  hero.addEventListener('mouseleave', play);
+  play();
+
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.lp-tile, .lp-steps > div, .lp-stat-grid > div').forEach(function (el) { io.observe(el); });
+  } else {
+    document.querySelectorAll('.lp-tile, .lp-steps > div, .lp-stat-grid > div').forEach(function (el) { el.classList.add('is-in'); });
+  }
+})();
+</script>
+</body>
+</html>
