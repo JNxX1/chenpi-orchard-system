@@ -1,0 +1,4 @@
+图片来源：Oranges in the field (UNIPA Oranges Dataset)
+LUCAS, B. et al. (2025), Mendeley Data, v1, doi:10.17632/93f32zgkxz.1
+许可：CC BY-NC 3.0（署名—非商业性使用），仅用于本项目的功能测试与演示
+说明：这些是意大利橙园实拍图，不是新会陈皮柑；上传到系统中即可测试果园检测效果。

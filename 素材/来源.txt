@@ -1,0 +1,31 @@
+素材来源：Pexels（https://www.pexels.com），Pexels 免费许可，可用于个人与商业项目，无需署名。
+下载时间：2026-10-23；检测样张补充于 2026-10-27。
+说明：Pexels 原图体积较大，未随仓库分发（仓库只保留检测样张）；需重制时按下方链接重新下载。
+
+原文件名 -> 项目内文件名（已改为中文，便于识别）
+pexels-magda-ehlers-pexels-37293927.jpg -> 首页图一-果园远山.jpg（首屏 1）
+pexels-165511592-11606369.jpg -> 首页图二-果园日出.jpg（首屏 2 / 登录页背景）
+pexels-solyartphotos-20540018.jpg -> 首页图三-橙子枝条.jpg（首屏 3）
+pexels-magda-ehlers-pexels-37293925.jpg -> 首页图四-密集果园.jpg（首屏 4）
+pexels-magda-ehlers-pexels-5078726.jpg -> 场景图一-果园行距.jpg（驾驶舱欢迎图 / 首页实景）
+pexels-joanjo-puertos-25432923-9711154.jpg -> 场景图二-青果.jpg（首页青果卡）
+pexels-m-e-r-v-e-42708268-35417788.jpg -> 场景图三-采收果篮.jpg（备用）
+pexels-nguyendesigner-37084565.jpg -> 场景图四-采摘.jpg（备用）
+pexels-ann-zzz-60709506-10335095.jpg -> 场景图五-果树近景.jpg（首页近景卡）
+
+检测样张（用于 YOLO 真实推理，全部下载自 Pexels，免费许可）：
+检测样张01-橙树果实.jpg  <- https://www.pexels.com/photo/30100245/
+检测样张02-果园橙子.jpg  <- https://www.pexels.com/photo/20540018/
+检测样张03-枝头柑橘.jpg  <- https://www.pexels.com/photo/30328747/
+检测样张04-密集果实.jpg  <- https://www.pexels.com/photo/37293925/
+检测样张05-橙子近景.jpg  <- https://www.pexels.com/photo/37293927/
+检测样张06-果树橙果.jpg  <- https://www.pexels.com/photo/10335095/
+检测样张07-柑橘枝条.jpg  <- https://www.pexels.com/photo/37084565/
+检测样张08-橙园果实.jpg  <- https://www.pexels.com/photo/28758681/
+检测样张09-柑橘树.jpg    <- https://www.pexels.com/photo/35069100/
+检测样张10-橙子挂枝.jpg  <- https://www.pexels.com/photo/35417790/
+检测样张11-青橙.jpg      <- https://www.pexels.com/photo/9711154/
+检测样张12-柑橘果实.jpg  <- https://www.pexels.com/photo/34411719/
+
+说明：检测样张只用于演示“真实模型推理”，图片内容与陈皮柑品种不完全一致；系统页面已标注模型不是陈皮柑专用。
+替换方法：保持目标文件名不变，覆盖同名文件即可。

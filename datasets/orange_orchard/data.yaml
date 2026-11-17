@@ -1,0 +1,5 @@
+path: D:/毕业设计/datasets/orange_orchard
+train: images/train
+val: images/val
+names:
+  0: orange
