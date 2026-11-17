@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/dashboard.png" alt="数据驾驶舱" width="880">
+  <img src="docs/images/landing.png" alt="对外首页（未登录可访问）" width="880">
 </p>
 
 <h1 align="center">陈皮柑果园智慧管理系统</h1>
@@ -20,7 +20,7 @@
 
 ---
 
-## 📖 项目简介
+## 项目简介
 
 陈皮柑（新会柑）果园的日常巡检、病虫害排查、产量预估，长期依赖纸质记录、零散的表格和手机相册。本系统把这些环节串成一条可追溯的业务链：
 
@@ -43,28 +43,34 @@
 
 ---
 
-## 🖼️ 界面预览
+## 界面预览
+
+上图是对外首页：未登录即可访问，含果园实拍轮播、功能入口与模型指标。登录后的主要页面如下：
 
 <table>
 <tr>
+<td width="50%"><img src="docs/images/dashboard.png" alt="数据驾驶舱"><br><sub><b>数据驾驶舱</b>：果园 / 地块 / 计划 / 影像 / 识别量 / 估产量汇总</sub></td>
 <td width="50%"><img src="docs/images/upload.png" alt="影像上传"><br><sub><b>影像上传</b>：多文件、类型与内容校验、上传后自动识别</sub></td>
-<td width="50%"><img src="docs/images/image-detail.png" alt="识别详情"><br><sub><b>识别详情</b>：原图 / 结果图对照、检测框明细与回放</sub></td>
 </tr>
 <tr>
-<td><img src="docs/images/yields.png" alt="估产记录"><br><sub><b>产量估算</b>：样本树数、校正系数、单果重与公式留痕</sub></td>
+<td><img src="docs/images/image-detail.png" alt="识别详情"><br><sub><b>识别详情</b>：原图 / 结果图对照、检测框明细与回放</sub></td>
 <td><img src="docs/images/live.png" alt="实时识别"><br><sub><b>实时识别</b>：摄像头或本地图片连续送帧，现场估算全园产量</sub></td>
 </tr>
 <tr>
+<td><img src="docs/images/yields.png" alt="产量估算"><br><sub><b>产量估算</b>：样本树数、校正系数、单果重与公式留痕</sub></td>
 <td><img src="docs/images/assistant.png" alt="智能助手"><br><sub><b>智能助手</b>：先查数据库事实，再由大模型组织语言</sub></td>
-<td><img src="docs/images/report-pdf-title.png" alt="PDF 报表"><br><sub><b>报表导出</b>：Excel / PDF，PDF 中文正常显示</sub></td>
+</tr>
+<tr>
+<td><img src="docs/images/report-pdf-title.png" alt="报表导出"><br><sub><b>报表导出</b>：Excel / PDF，PDF 中文正常显示</sub></td>
+<td><img src="docs/images/database.png" alt="数据浏览"><br><sub><b>数据浏览</b>：只读查看各表结构与记录，可导出 CSV</sub></td>
 </tr>
 </table>
 
-> 更多截图（登录、果园、计划、采收、数据浏览、报表）见 [`docs/images/`](docs/images/)。
+> 更多截图（登录页、果园、地块、巡检计划、采收、报表）见 [`docs/images/`](docs/images/)。
 
 ---
 
-## ✨ 功能特性
+## 功能特性
 
 ### 基础业务
 
@@ -104,7 +110,7 @@
 
 ---
 
-## 🧱 技术栈
+## 技术栈
 
 | 层次 | 选型 |
 |---|---|
@@ -117,7 +123,7 @@
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 1. 环境要求
 
@@ -172,7 +178,7 @@ python scripts/seed_industry.py
 
 ---
 
-## 📁 目录结构
+## 目录结构
 
 ```text
 app/                  Flask 应用
@@ -197,7 +203,7 @@ run.py                应用入口
 
 ---
 
-## 🍊 模型说明
+## 模型说明
 
 当前线上模型为 **YOLOv8n**，在公开数据集 *Oranges in the field*（UNIPA，DOI `10.17632/93f32zgkxz.1`，CC BY-NC 3.0）上训练，单类别 `orange`。
 
@@ -238,7 +244,7 @@ python scripts/train_yolo.py --data datasets/orange_orchard/data.yaml
 
 ---
 
-## ✅ 测试与验证
+## 测试与验证
 
 ```bash
 python -m pytest -q              # 59 条自动化测试
@@ -257,7 +263,7 @@ python scripts/smoke_e2e.py      # 对运行中的服务做端到端 HTTP 自检
 
 ---
 
-## 📚 文档导航
+## 文档导航
 
 | 文档 | 内容 |
 |---|---|
@@ -274,7 +280,7 @@ python scripts/smoke_e2e.py      # 对运行中的服务做端到端 HTTP 自检
 
 ---
 
-## ❓ 常见问题
+## 常见问题
 
 - **页面提示「已加载模型 … 不是陈皮柑专用模型」**：这是正常提示。换成专用权重只需把 `best.pt` 放到 `MODEL_PATH` 指向的位置并修改 `MODEL_NOTE`，无需重启（按文件修改时间自动重载）。
 - **识别结果是「演示」而不是检测框**：说明当前没有可用权重，属于预期的降级行为；放入权重后自动切换为真实推理。设置 `ALLOW_DEMO_DETECTOR=0` 可关闭演示模式。
@@ -287,7 +293,7 @@ python scripts/smoke_e2e.py      # 对运行中的服务做端到端 HTTP 自检
 
 ---
 
-## ⚠️ 已知限制
+## 已知限制
 
 - **没有陈皮柑专用数据集与权重**：现有模型训练自公开橙类果园数据，对陈皮柑（新会柑）的泛化能力有限，不能宣称「可靠的陈皮柑检测」。
 - **成熟度与大小等级是启发式估算**：前者基于框内颜色，后者是像素相对占比，均非模型分类结果。
@@ -297,7 +303,7 @@ python scripts/smoke_e2e.py      # 对运行中的服务做端到端 HTTP 自检
 
 ---
 
-## 📄 许可与致谢
+## 许可与致谢
 
 - 本项目为毕业设计作品，仅供学习、教学与答辩演示使用。
 - 果园实拍素材来自 [Pexels](https://www.pexels.com/)（免费许可），来源与许可见 `素材/来源.txt`、`samples/果园实拍样例/来源与许可.txt`。
