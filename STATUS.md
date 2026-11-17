@@ -9,8 +9,9 @@ P1–P4 与登录功能全部实现并通过测试；系统已在本机运行（
 - 参考资料：实训内容.docx 就是任务书本身（题目 10），里面没有可复用的代码、数据或模型。
 
 ## 代码仓库（2026-11-17）
-- 已上传 GitHub 私有仓库：https://github.com/JNxX1/chenpi-orchard-system（分支 main，提交作者改为 JNxX1）。
-- 仓库共 152 个文件、约 22 MB，历史为 3 次提交：配置与依赖 / 项目代码 / 文档与截图。
+- 已上传 GitHub 仓库（现为公开）：https://github.com/JNxX1/chenpi-orchard-system（分支 main，提交作者 JNxX1）。
+- 仓库 152 个文件、约 22 MB；提交按内容拆分：依赖与配置 / 后端 / 前端 / 脚本 / 测试 / 文档 / 示例与数据。
+- 公开前清理：移除个人简历 docs/简历-三个项目.md 与任务书等个人材料，仅本地保留。
 - `.gitignore` 排除 .venv、.idea、instance（数据库）、storage（上传与导出文件）、runs、tools/DBBrowser、models/*.pt、datasets/orange_orchard/images|labels、.env。
 - 本地私有、不入库（写在 `.git/info/exclude`，仓库里看不到）：CLAUDE.md、.claude/、tmp9/（临时脚本）、任务书与提交书 docx、素材/ 的首页图与场景图原图（体积大，app/static 已有压缩版）。
 - 本机直连 github.com:443 会被重置，仓库级配置 http.proxy / https.proxy = http://127.0.0.1:7897（Clash Verge 混合端口）；代理没开时推送会报 "Failed to connect to github.com:443"。
